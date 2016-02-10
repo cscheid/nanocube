@@ -69,6 +69,8 @@ FieldTypesList::FieldTypesList():
         { "nc_var_uint_7", 7, 1 },
         { "nc_var_uint_8", 8, 1 },
 
+        { "nc_var_float_8", 8, 1},
+
         // nc: categorical dimensions
         { "nc_dim_cat_1", 1, 1 },
         { "nc_dim_cat_2", 2, 1 },
@@ -121,7 +123,7 @@ FieldTypesList::FieldTypesList():
         { "nc_dim_quadtree_28", 8, 2 },
         { "nc_dim_quadtree_29", 8, 2 },
         { "nc_dim_quadtree_30", 8, 2 },
-        
+
         // nc: quadtree dimension (uint but with the name maps to the nanocube semantic)
         { "nc_dim_bintree_0",  1, 1 },
         { "nc_dim_bintree_1",  1, 1 },
@@ -309,16 +311,16 @@ int DumpFileDescription::getNumFieldsByType(const FieldType &field_type) const {
     }
     return count;
 }
-    
-    
-    
-    
+
+
+
+
 void DumpFileDescription::writeRecordTextualDescription(std::ostream &os, char* data, int len) {
     // assuming a binary record!
     if (len < record_size) {
         throw DumpFileException("Not enough bytes for a record");
     }
-    
+
     os << "{";
     std::size_t offset = 0;
     std::size_t value;
@@ -343,17 +345,17 @@ std::istream &operator>>(std::istream &is, DumpFileDescription &dump_file) {
     char buffer[1000];
 
     bool header_ok = true;
-    
+
     // read line
     while (1)
     {
         is.getline(buffer, 1000);
-        
+
         if (!is) {
             header_ok = false;
             break;
         }
-        
+
         std::string line(buffer);
 
         // std::cout << line << std::endl;

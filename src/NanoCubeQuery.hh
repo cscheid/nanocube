@@ -146,8 +146,11 @@ struct Eval<query_type, true> {
                 throw QueryException("Anchors on time dimension should use: base:width:count notation");
             }
 
-            uint64_t last_value = content.entries.back().template get<1>();
-            result.store(last_value, ::tree_store::ADD);
+            FixedVector<2> value;
+            value.vec[0] = content.entries.back().template get<1>();
+            value.vec[1] = content.entries.back().template get<2>();
+
+            result.store(value, ::tree_store::ADD);
 
 
         }
@@ -159,17 +162,19 @@ struct Eval<query_type, true> {
 
             ::query::BaseWidthCountTarget &bwc_target = *target->asBaseWidthCountTarget();
 
-            
+
             // TODO: check this please!!!
-            
+
             uint32_t base  = (uint32_t) bwc_target.base;
             uint32_t width = (uint32_t) bwc_target.width;
             uint32_t count = (uint32_t) bwc_target.count;
             uint32_t a = base;
             for (uint32_t i=0;i<count;i++) {
                 uint32_t b = a + width;
-                uint64_t value = content.template getWindowTotal<1>(a,b);
-                if (value != 0) {
+                FixedVector<2> value;
+                value.vec[0] = content.template getWindowTotal<1>(a,b);
+                value.vec[1] = content.template getWindowTotal<2>(a,b);
+                if (value.vec[0] != 0) {
                     if (anchored) {
                         // ::query::RawAddress addr = ((uint64_t) a << 32) + b;
                         std::vector<int> path { (int) i };
@@ -274,7 +279,7 @@ Query<NanoCube, Index>::Query(dimension_type             &tree,
 //        tree.visitRange(min_address, max_address, query);
     }
     else if (target->type == ::query::Target::MASK) {
-        
+
 //        //
 //        // There is a difference here compared to the other
 //        // cases. We need to pre-process the sequence into a
@@ -283,19 +288,19 @@ Query<NanoCube, Index>::Query(dimension_type             &tree,
 //        // (think about the partitioning of a polygon into
 //        // convex shapes)
 //        //
-//        
-//        
+//
+//
         ::query::MaskTarget &mask_target = *target->asMaskTarget();
 //
-//        
+//
 //        //        std::cout << "min_address: " << min_address << std::endl;
 //        //        std::cout << "max_address: " << max_address << std::endl;
-//        
+//
 //        // use the visitSubnodes interface
         tree.visitExistingTreeLeaves(mask_target.root, query);
-//        
+//
 //        //        ::query::RangeTarget &range_target = *target->asRangeTarget();
-//        
+//
 //        //        dimension_address_type min_address(range_target.min_address);
 //        //        dimension_address_type max_address(range_target.max_address);
 //        ////        std::cout << "min_address: " << min_address << std::endl;
@@ -322,7 +327,7 @@ void Query<NanoCube, Index>::visit(dimension_node_type *node, const dimension_ad
             result.pop();
             pushed = false;
         }
-        
+
         // address conversion
         if (query_description.img_hint[Index]) {
             // assume it is a dive target
@@ -331,7 +336,7 @@ void Query<NanoCube, Index>::visit(dimension_node_type *node, const dimension_ad
             if (dive_target) {
                 auto raw_base  = dive_target->base;
                 auto raw_child = address.raw();
-                
+
                 // assume these are quadtree addresses
                 auto base_tile = ::maps::Tile(raw_base);
                 auto child_tile = ::maps::Tile(raw_child);

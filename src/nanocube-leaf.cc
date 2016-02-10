@@ -58,6 +58,12 @@ struct NanoCubeSchema {
 //                std::cout << "time dimension with " << num_bytes << " bytes" << std::endl;
                 ss_variables_spec << "_u" << num_bytes;
             }
+ 	    else if (field_type_name.find("nc_var_float_") == 0) {
+                auto pos = field_type_name.begin() + field_type_name.rfind('_');
+                int num_bytes = std::stoi(std::string(pos+1,field_type_name.end()));
+//                std::cout << "time dimension with " << num_bytes << " bytes" << std::endl;
+                ss_variables_spec << "_f" << num_bytes;
+            }
 
             this->dimensions_spec         = ss_dimensions_spec.str();
             this->time_and_variables_spec = ss_variables_spec.str();

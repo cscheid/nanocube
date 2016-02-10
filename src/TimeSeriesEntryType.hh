@@ -164,10 +164,10 @@ public: // methods
     void accum(const TimeSeriesEntryType &a);
 
     template <int index>
-    uint64_t get() const;
+    double get() const;
 
     template <int index>
-    void set(uint64_t value);
+    void set(double value);
 
 };
 
@@ -187,8 +187,8 @@ struct Add {
             result.template set<index>(va);
         }
         else {
-            uint64_t va = a.template get<index>();
-            uint64_t vb = b.template get<index>();
+            double va = a.template get<index>();
+            double vb = b.template get<index>();
             result.template set<index>(va + vb);
         }
 
@@ -224,12 +224,12 @@ void TimeSeriesEntryType<var_types>::accum(const TimeSeriesEntryType &b)
 
 template<typename var_types>
 template <int index>
-uint64_t TimeSeriesEntryType<var_types>::get() const {
+double TimeSeriesEntryType<var_types>::get() const {
 
     static const int num_bytes    = mpl::at_c<sizes,   index>::type::value;
     static const int offset       = mpl::at_c<offsets, index>::type::value;
 
-    uint64_t result = 0;
+    double result = 0;
 
     std::copy(&data[offset], &data[offset + num_bytes], (char*) &result);
 
@@ -238,7 +238,7 @@ uint64_t TimeSeriesEntryType<var_types>::get() const {
 
 template<typename var_types>
 template <int index>
-void TimeSeriesEntryType<var_types>::set(uint64_t value) {
+void TimeSeriesEntryType<var_types>::set(double value) {
 
     static const int num_bytes = mpl::at_c<sizes,   index>::type::value;
     static const int offset    = mpl::at_c<offsets, index>::type::value;

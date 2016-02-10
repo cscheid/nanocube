@@ -25,7 +25,7 @@ namespace timeseries {
 typedef int32_t  Level; // this goes up 25 (17 zooms + 8 resolution)
 typedef uint32_t Coordinate;
 typedef uint32_t ChildIndex;
-typedef uint64_t Count;
+typedef double Count;
 
 //
 typedef uint8_t  BitSize;
@@ -70,7 +70,7 @@ public:
     TimeSeries* getRoot();
 
     template <int VariableIndex>
-    uint64_t getWindowTotal(Timestamp a, Timestamp b) const;
+    double getWindowTotal(Timestamp a, Timestamp b) const;
 
     void dump(std::ostream &os) const;
 
@@ -83,10 +83,10 @@ public: // change back to public because of the ObjectFactory deseralization nee
     static void* operator new(size_t size);
     static void  operator delete(void *p);
 
-    static uint64_t count_new;
-    static uint64_t count_delete;
-    static uint64_t count_used_bins;
-    static uint64_t count_num_adds;
+    static double count_new;
+    static double count_delete;
+    static double count_used_bins;
+    static double count_num_adds;
 
 public: // attributes
 
@@ -154,16 +154,16 @@ std::vector<TimeSeries<Entry>*> TimeSeries<Entry>::tslist;
 //-----------------------------------------------------------------------------
 
 template<typename Entry>
-uint64_t TimeSeries<Entry>::count_new = 0;
+double TimeSeries<Entry>::count_new = 0;
 
 template<typename Entry>
-uint64_t TimeSeries<Entry>::count_delete = 0;
+double TimeSeries<Entry>::count_delete = 0;
 
 template<typename Entry>
-uint64_t TimeSeries<Entry>::count_used_bins = 0;
+double TimeSeries<Entry>::count_used_bins = 0;
 
 template<typename Entry>
-uint64_t TimeSeries<Entry>::count_num_adds = 0;
+double TimeSeries<Entry>::count_num_adds = 0;
 
 template<typename Entry>
 void* TimeSeries<Entry>::operator new(size_t size) {
@@ -322,7 +322,7 @@ TimeSeries<Entry> *TimeSeries<Entry>::getRoot()
 
 template<typename Entry>
 template<int VariableIndex>
-uint64_t TimeSeries<Entry>::getWindowTotal(Timestamp a, Timestamp b) const
+double TimeSeries<Entry>::getWindowTotal(Timestamp a, Timestamp b) const
 {
     // EntryType ea(a,0);
     auto cmp = [](const Entry& e, Timestamp tb) -> bool{
@@ -334,13 +334,13 @@ uint64_t TimeSeries<Entry>::getWindowTotal(Timestamp a, Timestamp b) const
     if (it_a == entries.end()) {
         return 0;
     }
-    uint64_t count_a = (it_a == entries.begin() ? 0 : (it_a-1)->template get<VariableIndex>());
+    double count_a = (it_a == entries.begin() ? 0 : (it_a-1)->template get<VariableIndex>());
 
     auto it_b = std::lower_bound(entries.begin(), entries.end(), b, cmp);
     if (it_b == entries.begin()) {
         return 0;
     }
-    uint64_t count_b = (it_b-1)->template get<VariableIndex>();
+    double count_b = (it_b-1)->template get<VariableIndex>();
     return count_b - count_a;
 }
 

@@ -140,6 +140,7 @@ struct u6 { static const int size = 6; };
 struct u7 { static const int size = 7; };
 struct u8 { static const int size = 8; };
 
+struct f8 { static const int size = 8;};
 
 //------------------------------------------------------------------------------
 // expand_flattree

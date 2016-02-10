@@ -989,24 +989,25 @@ void TreeStoreBuilder<T>::store(value_type value, StoreOp op, StoreMode store_mo
             return a + b;
         case SUB:
             return a - b;
-        case MUL:
-            return a * b;
-        case DIV:
-            return (b != 0 ? a/b : 0.0);
-        case POW:
-            return std::pow(a,b);
-        case GEQ:
-            return (a >= b ? 1.0 : 0.0);
-        case LEQ:
-            return (a <= b ? 1.0 : 0.0);
-        case LE:
-            return (a <  b ? 1.0 : 0.0);
-        case GT:
-            return (a >  b ? 1.0 : 0.0);
-        case NEQ:
-            return (a != b ? 1.0 : 0.0);
-        case EQ:
-            return (a == b ? 1.0 : 0.0);
+        // These operations don't make any sense for FixedVector type
+        //case MUL:
+        //    return a * b;
+        //case DIV:
+        //    return (b != 0 ? a/b : 0);
+        //case POW:
+        //    return std::pow(a,b);
+        //case GEQ:
+        //    return (a >= b ? 1.0 : 0.0);
+        //case LEQ:
+        //    return (a <= b ? 1.0 : 0.0);
+        //case LE:
+        //    return (a <  b ? 1.0 : 0.0);
+        //case GT:
+        //    return (a >  b ? 1.0 : 0.0);
+        //case NEQ:
+        //    return (a != b ? 1.0 : 0.0);
+        //case EQ:
+        //    return (a == b ? 1.0 : 0.0);
         default:
             throw TreeStoreException("Operation not implemented");
         }

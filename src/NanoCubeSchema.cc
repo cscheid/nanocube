@@ -32,6 +32,11 @@ Schema::Schema(dumpfile::DumpFileDescription &dump_file_description):
             int num_bytes = std::stoi(std::string(pos+1,field_type_name.end()));
             this->variable_keys.push_back("u" + std::to_string(num_bytes));
         }
+        else if (field_type_name.find("nc_var_double_") == 0) {
+            auto pos = field_type_name.begin() + field_type_name.rfind('_');
+            int num_bytes = std::stoi(std::string(pos+1,field_type_name.end()));
+            this->variable_keys.push_back("d" + std::to_string(num_bytes));
+        }
     }
 }
 

@@ -8,7 +8,8 @@ namespace nanocube {
 // SimpleConfig Impl.
 //-----------------------------------------------------------------
 
-const double SimpleConfig::default_value = 0.0f;
+const SimpleConfig::value_type SimpleConfig::default_value = SimpleConfig::value_type();
+const SimpleConfig::value_type SimpleConfig::zero_value = SimpleConfig::value_type();
 
 std::size_t SimpleConfig::operator()(const label_type &label) const {
     std::size_t hash_value = 0;
