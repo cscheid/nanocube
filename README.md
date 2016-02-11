@@ -4,7 +4,7 @@
 
 Nanocubes now support aggregation on multi-dimensional floating point values. Currently, you need to manually change some configurations in the source code:
 
-1. At the begining of `/src/NanoCubeQuery.hh`, the number of dimensions, for example two dimensions, is defined by `#define VEC_SIZE 2`. You can change `2` to any other number you need.
+1. At the begining of `/src/tree_store_nanocube.hh`, the number of dimensions, for example two dimensions, is defined by `static const int VAR_VEC_SIZE = 2`. You can change `2` to any other number you need.
 2. At the bottom of `/src/MakeFile.am`, modify `-DLIST_VARIABLE_TYPES` to adapt to your multi-dimensional variable's schema. For example, if your variable has two dimensions, it should be `-DLIST_VARIABLE_TYPES=u2,f8,f8`. For five dimensions, it should be `-DLIST_VARIABLE_TYPES=u2,f8,f8,f8,f8,f8`. Please remember you should always add an extra time dimension at the beginning.
 
 ## Compiling

@@ -1,7 +1,5 @@
 #pragma once
 
-#define VEC_SIZE 2
-
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/int.hpp>
@@ -162,8 +160,8 @@ struct Eval<query_type, true> {
                 throw QueryException("Anchors on time dimension should use: base:width:count notation");
             }
 
-            FixedVector<VEC_SIZE> value;
-            Loop<dimension_content_type, FixedVector<VEC_SIZE>, VEC_SIZE>::Copy(value, content);
+            FixedVector<nanocube::VAR_VEC_SIZE> value;
+            Loop<dimension_content_type, FixedVector<nanocube::VAR_VEC_SIZE>, nanocube::VAR_VEC_SIZE>::Copy(value, content);
 
             result.store(value, ::tree_store::ADD);
 
@@ -186,8 +184,8 @@ struct Eval<query_type, true> {
             uint32_t a = base;
             for (uint32_t i=0;i<count;i++) {
                 uint32_t b = a + width;
-                FixedVector<VEC_SIZE> value, zero;
-                Loop<dimension_content_type, FixedVector<VEC_SIZE>, VEC_SIZE>::Copy(value, content);
+                FixedVector<nanocube::VAR_VEC_SIZE> value, zero;
+                Loop<dimension_content_type, FixedVector<nanocube::VAR_VEC_SIZE>, nanocube::VAR_VEC_SIZE>::Copy(value, content);
                 if (!(value == zero)) {
                     if (anchored) {
                         // ::query::RawAddress addr = ((uint64_t) a << 32) + b;

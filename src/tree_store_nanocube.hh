@@ -7,6 +7,9 @@
 
 namespace nanocube {
 
+// The dimension of the variable
+static const int VAR_VEC_SIZE = 2;
+
 //-----------------------------------------------------------------
 // SimpleConfig
 //-----------------------------------------------------------------
@@ -70,7 +73,7 @@ struct SimpleConfig {
     
     using label_type       = ::nanocube::DimAddress;
     using label_item_type  = typename label_type::value_type;
-    using value_type       = FixedVector<2>;
+    using value_type       = FixedVector<VAR_VEC_SIZE>;
     using parameter_type   = int; // dummy parameter
     
     static const value_type default_value;
