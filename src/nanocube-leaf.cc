@@ -96,7 +96,7 @@ struct Options {
     TCLAP::CmdLine cmd_line { "Nanocube Leaf - local process", ' ', "2.3", true };
 
     // -s or --schema
-    TCLAP::ValueArg<std::string> schema {  
+    TCLAP::ValueArg<std::string> schema {
             "s",              // flag
             "schema",         // name
             "Nanocube schema file (if not coming from stdin)", // description
@@ -137,7 +137,7 @@ int main(int argc, char **argv)
                 it = args.erase(it);
             }
         }
-        
+
 
         // read options
         // std::vector<std::string> args(argv, argv + argc);
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
         //    (1) is there a single time column
         //    (2) are all field types starting with nc_ prefix
         //
-        
+
         // pipe
         int pipe_fds[2];
         if(pipe(pipe_fds) == -1)
@@ -182,8 +182,8 @@ int main(int argc, char **argv)
         int pipe_read_file_descriptor  = pipe_fds[0];
         int pipe_write_file_descriptor = pipe_fds[1];
 
-        
-        
+
+
         // create pipe
 
         // Spawn a child to run the program.
@@ -199,14 +199,14 @@ int main(int argc, char **argv)
                 ss << input_file_description;
                 ss << std::endl;
             }
-            
+
             bool finish_redirect = false;
             bool redirect_error = false;
-            
+
             auto redirect = [&finish_redirect,&redirect_error](std::string initial_content, int fd_write) {
 
                 FILE *f = fdopen(fd_write, "w");
-                
+
                 if (initial_content.size() > 0) {
 
                     fwrite((void*) initial_content.c_str(), 1 , initial_content.size(), f);
@@ -216,9 +216,9 @@ int main(int argc, char **argv)
                         fclose(f);
                         return; // problem writing to pipe
                     }
-                    
+
                 }
-                
+
                 // write everything coming from stdin to child process
                 const int BUFFER_SIZE = 4095;
                 char buffer[BUFFER_SIZE + 1];
@@ -234,7 +234,7 @@ int main(int argc, char **argv)
                                 fclose(f);
                                 return; // problem writing to pipe
                             }
-                        
+
                         }
                         break;
                     }
@@ -249,44 +249,44 @@ int main(int argc, char **argv)
 
                     }
                 }
-                
+
                 // clear
                 fflush(f);
                 fclose(f);
-                
+
             };
-            
+
             // start thread to redirect
             std::thread redirect_thread(redirect, ss.str(), pipe_write_file_descriptor);
-            
+
 #ifdef DEBUG_NANOCUBE_LEAF_PROCESS
             std::cerr << "[nanocube-leaf] parent process is waiting for child process to finish..." << std::endl;
 #endif
 
             // std::this_thread::sleep_for(std::chrono::seconds(1));
             waitpid(pid,0,0); /* wait for child to exit */
-            
+
 #ifdef DEBUG_NANOCUBE_LEAF_PROCESS
             std::cerr << "[nanocube-leaf] finishing the redirect procedure..." << std::endl;
 #endif
 
             finish_redirect = true;
             redirect_thread.join();
-            
+
 #ifdef DEBUG_NANOCUBE_LEAF_PROCESS
             std::cerr << "[nanocube-leaf] parent process done..." << std::endl;
 #endif
 
-            
+
         }
         else {
             close(pipe_write_file_descriptor);
-            
+
             /* both file descriptors refer to pipe_read_file_descriptor */
             /* std::cin becomes the pipe read channel */
             dup2(pipe_read_file_descriptor, STDIN_FILENO);
             close(pipe_read_file_descriptor);
-            
+
             // exec new process
             std::string program_name;
             {
@@ -304,10 +304,11 @@ int main(int argc, char **argv)
                     ss << "./";
                 }
 
-                ss << "nc" << nc_schema.dimensions_spec << nc_schema.time_and_variables_spec;
+                //ss << "nc" << nc_schema.dimensions_spec << nc_schema.time_and_variables_spec;
+                ss << "nc_fixed_vector";
                 program_name = ss.str();
             }
-            
+
             // child process will be replaced by this other process
             // could we do thi in the main process? maybe
             // execlp(program_name.c_str(), program_name.c_str(), NULL);
@@ -315,7 +316,7 @@ int main(int argc, char **argv)
 
             // failed to execute program
             std::cout << "Could not find program: " << program_name << std::endl;
-        
+
             exit(-1); /* only if execv fails */
 
         }

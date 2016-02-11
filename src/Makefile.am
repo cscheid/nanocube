@@ -16,7 +16,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 bin_PROGRAMS =              \
 nanocube-binning-dmp        \
 nanocube-leaf               \
-nc_q25_c1_u2_f8_f8
+nc_fixed_vector
 
 AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/src/mongoose \
 		$(OPENSSL_INCLUDES)
@@ -162,12 +162,12 @@ polycover/tokenizer.hh
 NANOCUBE_VERSION = $(shell cat $(top_srcdir)/VERSION)
 AM_CXXFLAGS += -DNANOCUBE_VERSION=\"$(NANOCUBE_VERSION)\"
 
-nc_q25_c1_u2_f8_f8_LDFLAGS  = $(AM_LDFLAGS)
-nc_q25_c1_u2_f8_f8_CXXFLAGS = $(AM_CXXFLAGS) \
+nc_fixed_vector_LDFLAGS  = $(AM_LDFLAGS)
+nc_fixed_vector_CXXFLAGS = $(AM_CXXFLAGS) \
     -D_GLIBCXX_USE_NANOSLEEP \
     -D_GLIBCXX_USE_SCHED_YIELD \
     -DLIST_DIMENSION_NAMES=q25,c1 \
     -DLIST_VARIABLE_TYPES=u2,f8,f8 \
     -DVERSION=\"$(VERSION)\"
-nc_q25_c1_u2_f8_f8_SOURCES =\
+nc_fixed_vector_SOURCES =\
     $(nc_SOURCES)
