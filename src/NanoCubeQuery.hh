@@ -1,5 +1,7 @@
 #pragma once
 
+#define VEC_SIZE 2
+
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/int.hpp>
@@ -117,6 +119,20 @@ struct Eval {
     }
 };
 
+template<typename ContentType, typename ValueType, int N>
+struct Loop {
+    static inline void Copy(ValueType &v, ContentType &c) {
+        v.vec[N-1] = c.entries.back().template get<N>();
+        Loop<ContentType, ValueType, N - 1>::Copy(v, c);
+    }
+};
+
+template<typename ContentType, typename ValueType>
+struct Loop<ContentType, ValueType, 0> {
+    static inline void Copy(ValueType &v, ContentType &c) {
+    }
+};
+
 template <typename query_type>
 struct Eval<query_type, true> {
 
@@ -146,9 +162,8 @@ struct Eval<query_type, true> {
                 throw QueryException("Anchors on time dimension should use: base:width:count notation");
             }
 
-            FixedVector<2> value;
-            value.vec[0] = content.entries.back().template get<1>();
-            value.vec[1] = content.entries.back().template get<2>();
+            FixedVector<VEC_SIZE> value;
+            Loop<dimension_content_type, FixedVector<VEC_SIZE>, VEC_SIZE>::Copy(value, content);
 
             result.store(value, ::tree_store::ADD);
 
@@ -171,10 +186,9 @@ struct Eval<query_type, true> {
             uint32_t a = base;
             for (uint32_t i=0;i<count;i++) {
                 uint32_t b = a + width;
-                FixedVector<2> value;
-                value.vec[0] = content.template getWindowTotal<1>(a,b);
-                value.vec[1] = content.template getWindowTotal<2>(a,b);
-                if (value.vec[0] != 0) {
+                FixedVector<VEC_SIZE> value, zero;
+                Loop<dimension_content_type, FixedVector<VEC_SIZE>, VEC_SIZE>::Copy(value, content);
+                if (!(value == zero)) {
                     if (anchored) {
                         // ::query::RawAddress addr = ((uint64_t) a << 32) + b;
                         std::vector<int> path { (int) i };
