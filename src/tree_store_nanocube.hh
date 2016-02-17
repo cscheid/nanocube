@@ -8,7 +8,7 @@
 namespace nanocube {
 
 // The dimension of the variable
-static const int VAR_VEC_SIZE = 2;
+static const int VAR_VEC_SIZE = 10;
 
 //-----------------------------------------------------------------
 // SimpleConfig
@@ -22,6 +22,7 @@ struct FixedVector {
 template <unsigned N>
 std::ostream& operator << (std::ostream& output, const FixedVector<N>& c)
 {
+    output.precision(10);
     output << "[";
     for (int i = 0; i < N; i ++) {
         output << c.vec[i];
@@ -70,29 +71,29 @@ bool operator == (FixedVector<N>& a,FixedVector<N>& b)
 
 
 struct SimpleConfig {
-    
+
     using label_type       = ::nanocube::DimAddress;
     using label_item_type  = typename label_type::value_type;
     using value_type       = FixedVector<VAR_VEC_SIZE>;
     using parameter_type   = int; // dummy parameter
-    
+
     static const value_type default_value;
     static const value_type zero_value;
-    
+
     std::size_t operator()(const label_type &label) const;
-    
+
     std::ostream& print_label(std::ostream& os, const label_type &label) const;
-    
+
     std::ostream& print_value(std::ostream& os, const value_type &value, const parameter_type& parameter) const;
-    
+
     std::ostream& serialize_label(std::ostream& os, const label_type &label);
-    
+
     std::istream& deserialize_label(std::istream& is, label_type &label);
-    
+
     std::ostream& serialize_value(std::ostream& os, const value_type &value);
-    
+
     std::istream& deserialize_value(std::istream& is, value_type &value);
-    
+
 };
 
 using TreeValue = tree_store::TreeStore<SimpleConfig>;
@@ -100,5 +101,5 @@ using TreeValueBuilder = tree_store::TreeStoreBuilder<TreeValue>;
 
 using TreeValueIterator = tree_store::TreeStoreIterator<TreeValue>;
 
-    
+
 }
