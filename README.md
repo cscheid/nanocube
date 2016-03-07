@@ -5,7 +5,8 @@
 Nanocubes now support aggregation on multi-dimensional floating point values. Currently, you need to manually change some configurations in the source code:
 
 1. At the begining of `/src/tree_store_nanocube.hh`, the number of dimensions, for example two dimensions, is defined by `static const int VAR_VEC_SIZE = 2`. You can change `2` to any other number you need.
-2. At the bottom of `/src/MakeFile.am`, modify `-DLIST_VARIABLE_TYPES` to adapt to your multi-dimensional variable's schema. For example, if your variable has two dimensions, it should be `-DLIST_VARIABLE_TYPES=u2,f8,f8`. For five dimensions, it should be `-DLIST_VARIABLE_TYPES=u2,f8,f8,f8,f8,f8`. Please remember you should always add an extra time dimension at the beginning.
+2. At the bottom of `/src/MakeFile.am`, modify `-DLIST_DIMENSION_NAMES` and `-DLIST_VARIABLE_TYPES` to adapt to your data's schema. For variable types, if your variable has two dimensions, it should be `-DLIST_VARIABLE_TYPES=u2,f8,f8`. For five dimensions, it should be `-DLIST_VARIABLE_TYPES=u2,f8,f8,f8,f8,f8`. Please remember you should always add an extra time dimension at the beginning.
+3. At the begining of `/src/nc.cc`, define `BOOST_MPL_LIMIT_VECTOR_SIZE` to the desired maximum arity rounded up to the nearest multiple of ten. See [BOOST_MPL_LIMIT_VECTOR_SIZE](http://www.boost.org/doc/libs/1_60_0/libs/mpl/doc/refmanual/limit-vector-size.html) for detail.
 
 ## Compiling
 
