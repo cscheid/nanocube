@@ -123,11 +123,17 @@ struct Loop {
         v.vec[N-1] = c.entries.back().template get<N>();
         Loop<ContentType, ValueType, N - 1>::Copy(v, c);
     }
+    static inline void CopyWindow(ValueType &v, ContentType &c, uint32_t a, uint32_t b) {
+        v.vec[N-1] = c.template getWindowTotal<N>(a, b);
+        Loop<ContentType, ValueType, N - 1>::CopyWindow(v, c, a, b);
+    }
 };
 
 template<typename ContentType, typename ValueType>
 struct Loop<ContentType, ValueType, 0> {
     static inline void Copy(ValueType &v, ContentType &c) {
+    }
+    static inline void CopyWindow(ValueType &v, ContentType &c, uint32_t a, uint32_t b) {
     }
 };
 
@@ -185,7 +191,7 @@ struct Eval<query_type, true> {
             for (uint32_t i=0;i<count;i++) {
                 uint32_t b = a + width;
                 FixedVector<nanocube::VAR_VEC_SIZE> value, zero;
-                Loop<dimension_content_type, FixedVector<nanocube::VAR_VEC_SIZE>, nanocube::VAR_VEC_SIZE>::Copy(value, content);
+                Loop<dimension_content_type, FixedVector<nanocube::VAR_VEC_SIZE>, nanocube::VAR_VEC_SIZE>::CopyWindow(value, content, a, b);
                 if (!(value == zero)) {
                     if (anchored) {
                         // ::query::RawAddress addr = ((uint64_t) a << 32) + b;
@@ -374,3 +380,8 @@ void Query<NanoCube, Index>::visit(dimension_node_type *node, const dimension_ad
 } // end query namespace
 
 } // nanocube namespace
+
+/* Local Variables:  */
+/* mode: c++         */
+/* c-basic-offset: 4 */
+/* End:              */
