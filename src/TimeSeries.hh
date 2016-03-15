@@ -207,8 +207,8 @@ TimeSeries<Entry>::add(Entry entry)
     }
     else
     {
-        uint64_t entry_time = entry.template get<0>();
-        uint64_t current_entry_time = entries.back().template get<0>();
+        uint64_t entry_time = entry.getTime();
+        uint64_t current_entry_time = entries.back().getTime();
 
         // TODO sum the entries starting on the second entry...
         if (current_entry_time < entry_time) {
@@ -230,7 +230,7 @@ TimeSeries<Entry>::add(Entry entry)
         else { // out of order case: SLOW
 
             auto comp = [](const Entry &e, uint64_t time) -> bool {
-                uint64_t e_time = e.template get<0>();
+                uint64_t e_time = e.getTime();
                 return e_time < time;
             };
 
@@ -241,7 +241,7 @@ TimeSeries<Entry>::add(Entry entry)
                 throw std::runtime_error("Not expected");
             }
 
-            uint64_t insertion_time = (*it).template get<0>();
+            uint64_t insertion_time = (*it).getTime();
 
             Count used_size_inc = 0;
 
@@ -326,7 +326,7 @@ double TimeSeries<Entry>::getWindowTotal(Timestamp a, Timestamp b) const
 {
     // EntryType ea(a,0);
     auto cmp = [](const Entry& e, Timestamp tb) -> bool{
-        Timestamp ta = e.template get<0>();
+        Timestamp ta = e.getTime();
         return (ta < tb);
     };
 

@@ -163,12 +163,11 @@ public: // methods
 
     void accum(const TimeSeriesEntryType &a);
 
-    template <int index>
-    double get() const;
+    double getTime() const;
+    template <int index> double get() const;
 
-    template <int index>
-    void set(double value);
-
+    void setTime(uint64_t v);
+    template <int index> void set(double value);
 };
 
 
@@ -181,18 +180,17 @@ template <typename tsentry, int n>
 struct Add {
     static void add_tsentry(const tsentry &a, const tsentry&b, tsentry &result) {
         static const int index        = tsentry::dimension - n;
-
-        uint64_t va = a.template get<index>();
+        
         if (index == 0) {
-            result.template set<index>(va);
-        }
-        else {
+            uint64_t va = a.getTime();
+            result.setTime(va);
+        } else {
             double va = a.template get<index>();
             double vb = b.template get<index>();
             result.template set<index>(va + vb);
         }
 
-        Add<tsentry,n-1>::add_tsentry(a, b , result);
+        Add<tsentry,n-1>::add_tsentry(a, b, result);
     }
 };
 
@@ -202,19 +200,6 @@ struct Add<tsentry,0> {
     }
 };
 
-//template<typename var_types>
-//TimeSeriesEntryType<var_types> TimeSeriesEntryType<var_types>::operator+(const TimeSeriesEntryType &b) const {
-//    typedef TimeSeriesEntryType<var_types> tsentry;
-//    const tsentry &a = *this;
-//    // keep first coord
-//    tsentry result;
-//    // runtime check
-//    assert(a.template get<0>() ==  b.template get<0>());
-//    //
-//    add_tsentry<tsentry, tsentry::dimension>(a, b, result);
-//    return result;
-//}
-
 template<typename var_types>
 void TimeSeriesEntryType<var_types>::accum(const TimeSeriesEntryType &b)
 {
@@ -222,6 +207,19 @@ void TimeSeriesEntryType<var_types>::accum(const TimeSeriesEntryType &b)
     Add<tsentry, tsentry::dimension>::add_tsentry(*this, b, *this);
 }
 
+template<typename var_types>
+double TimeSeriesEntryType<var_types>::getTime() const {
+
+    static const int num_bytes    = mpl::at_c<sizes,   0>::type::value;
+    static const int offset       = mpl::at_c<offsets, 0>::type::value;
+
+    short result = 0;
+
+    std::copy(&data[offset], &data[offset + num_bytes], (char*) &result);
+
+    return double(result);
+
+}
 template<typename var_types>
 template <int index>
 double TimeSeriesEntryType<var_types>::get() const {
@@ -236,6 +234,18 @@ double TimeSeriesEntryType<var_types>::get() const {
     return result;
 }
 
+template<typename var_types>
+void TimeSeriesEntryType<var_types>::setTime(uint64_t v) {
+
+    static const int num_bytes = mpl::at_c<sizes,   0>::type::value;
+    static const int offset    = mpl::at_c<offsets, 0>::type::value;
+
+    short value = (short) v;
+    char *ptr = (char*) &value;
+
+    std::copy(ptr, ptr + num_bytes, (char*) &data[offset]);
+}
+  
 template<typename var_types>
 template <int index>
 void TimeSeriesEntryType<var_types>::set(double value) {
