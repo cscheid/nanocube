@@ -142,8 +142,11 @@ RawAddress AddressFunction::getRawAddress() const
         int x     = (int) parameters[0];
         int y     = (int) parameters[1];
         int level = (int) parameters[2];
-        
-        typedef quadtree::Address<29,int> QAddr;
+
+        struct Boo {
+          typedef void LeafType;
+        };
+        typedef quadtree::Address<29,Boo> QAddr;
         
         QAddr addr(x, y, level, true);
         

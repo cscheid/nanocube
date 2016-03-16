@@ -145,14 +145,14 @@ struct f8 { static const int size = 8;};
 // expand_flattree
 //------------------------------------------------------------------------------
 
-template <typename Content, int NumBytes>
+template <typename Content, int NumBytes, typename LeafType>
 struct expand_flattree {
     using type = flattree_n::FlatTree<NumBytes, Content>; // general implementation
 };
 
-template <typename Content>
-struct expand_flattree<Content,1> {
-    using type = flattree::FlatTree<Content>; // space optimized implementation
+  template <typename Content, typename LeafType>
+struct expand_flattree<Content, 1, LeafType> {
+    using type = flattree::FlatTree<Content, LeafType>; // space optimized implementation
 };
 
 //------------------------------------------------------------------------------
@@ -164,14 +164,14 @@ struct expand_dim_type {};
 
 template <typename Dim>
 struct expand_dim_type<Dim, QUADTREE> {
-    template <typename Content>
-    struct content { using type = quadtree::QuadTree<Dim::Levels,Content>; };
+    template <typename Content, typename LeafType>
+    struct content { using type = quadtree::QuadTree<Dim::Levels, Content, LeafType>; };
 };
 
 template <typename Dim>
 struct expand_dim_type<Dim, FLATTREE> {
-    template <typename Content>
-    struct content { using type = typename expand_flattree<Content, Dim::NumBytes>::type; };
+    template <typename Content, typename LeafType>
+    struct content { using type = typename expand_flattree<Content, Dim::NumBytes, LeafType>::type; };
 };
 
 //------------------------------------------------------------------------------
@@ -180,9 +180,9 @@ struct expand_dim_type<Dim, FLATTREE> {
 
 template <typename Dim>
 struct mapDimensionNameToDimensionType {
-    template <typename Content>
+    template <typename Content, typename LeafType>
     struct content {
-        using type = typename expand_dim_type< Dim, Dim::Kind >::template content<Content>::type;
+        using type = typename expand_dim_type< Dim, Dim::Kind >::template content<Content, LeafType>::type;
     };
 };
 
@@ -199,7 +199,7 @@ struct Unfold {
 
     static const bool EmptyFlag = mpl::empty<next_dimension_names_input_list>::type::value;
 
-    typedef typename mapDimensionNameToDimensionType<current_dimension_name>::template content<Content>::type current_dimension_type;
+    typedef typename mapDimensionNameToDimensionType<current_dimension_name>::template content<Content, LeafType>::type current_dimension_type;
 
     typedef typename mpl::push_front<CurrentDimensionTypesList, current_dimension_type>::type current_dimension_types_list;
 
@@ -457,3 +457,8 @@ void NanoCubeTemplate<dim_names, var_types>::timeQuery(
 
 
 } // end of report namespace
+
+/* Local Variables:  */
+/* mode: c++         */
+/* c-basic-offset: 4 */
+/* End:              */

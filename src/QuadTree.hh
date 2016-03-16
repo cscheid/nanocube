@@ -52,10 +52,10 @@ typedef uint8_t  BitIndex; // this goes up 25 (17 zooms + 8 resolution)
 template<BitSize N, typename Structure>
 class Address;
 
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 class QuadTree;
 
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 struct Iterator;
 
 //-----------------------------------------------------------------------------
@@ -96,8 +96,8 @@ struct StackItemTemplate
     StackItemTemplate();
     StackItemTemplate(Node<Content>* node, Address<N, Structure> address);
 
-    Node<Content>             *node;
-    Address<N, Structure>      address;
+    Node<Content>         *node;
+    Address<N, Structure> address;
 };
 
 //-----------------------------------------------------------------------------
@@ -108,18 +108,18 @@ struct StackItemTemplate
 // one exrea pointer per quadtree. Bad in the case
 // of nested quadtrees!
 
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType_>
 class QuadTree
 {
 public:
 
-
-    typedef QuadTree<N,Content>              Type;
+    typedef LeafType_                        LeafType;
+    typedef QuadTree<N, Content, LeafType>   Type;
     typedef Node<Content>                    NodeType;
     typedef Address<N, Type>                 AddressType;
-    typedef Iterator<N, Content>             IteratorType;
+    typedef Iterator<N, Content, LeafType>   IteratorType;
     typedef Content                          ContentType;
-
+    
     typedef std::vector<NodeType*>           NodeStackType;
 
     static const BitSize AddressSize = N;
@@ -210,7 +210,7 @@ public:
 //-----------------------------------------------------------------------------
 
 // Iterate through all parent-child relations
-template <BitSize N, typename Content>
+  template <BitSize N, typename Content, typename LeafType>
 struct Iterator {
 
 public: // constants
@@ -218,10 +218,10 @@ public: // constants
     static const bool PROPER = true;
 
 public: // subtypes
-    typedef QuadTree<N, Content>                       tree_type;
-    typedef typename QuadTree<N,Content>::NodeType     node_type;
-    typedef typename QuadTree<N,Content>::AddressType  address_type;
-    typedef NodePointer<Content>                       node_pointer_type;
+    typedef QuadTree<N, Content, LeafType>                        tree_type;
+    typedef typename QuadTree<N, Content, LeafType>::NodeType     node_type;
+    typedef typename QuadTree<N, Content, LeafType>::AddressType  address_type;
+    typedef NodePointer<Content>                                  node_pointer_type;
 
 public: // constructor
     Iterator(const tree_type &tree);
@@ -302,8 +302,8 @@ public:
 
 };
 
-template <BitSize N, typename Content>
-Iterator<N,Content>::Iterator(const tree_type& tree):
+template <BitSize N, typename Content, typename LeafType>
+Iterator<N,Content, LeafType>::Iterator(const tree_type& tree):
     tree(tree)
 {
     stack.push(Item(tree.root,
@@ -313,8 +313,8 @@ Iterator<N,Content>::Iterator(const tree_type& tree):
                     false));
 }
 
-template <BitSize N, typename Content>
-bool Iterator<N,Content>::next() {
+template <BitSize N, typename Content, typename LeafType>
+bool Iterator<N,Content, LeafType>::next() {
 
     if (stack.empty()) {
         return false;
@@ -373,6 +373,7 @@ class Address
 public:
 
     typedef Structure StructureType; // type of the structure addressed by this Address
+    typedef typename Structure::LeafType LeafType;
 
 public: // constructors
 
@@ -473,8 +474,8 @@ std::ostream& operator<<(std::ostream &os, const Address<N, Structure>& addr)
 // Implmentation of QuadTree Template members
 //-----------------------------------------------------------------------------
 
-template<BitSize N, typename Content>
-QuadTree<N, Content>::QuadTree():
+template<BitSize N, typename Content, typename LeafType>
+QuadTree<N, Content, LeafType>::QuadTree():
     root(nullptr)
 {
     // std::cout << "constructing quadtree " << (unsigned long) this << std::endl;
@@ -482,8 +483,8 @@ QuadTree<N, Content>::QuadTree():
 }
 
 
-template<BitSize N, typename Content>
-QuadTree<N, Content>::~QuadTree()
+template<BitSize N, typename Content, typename LeafType>
+QuadTree<N, Content, LeafType>::~QuadTree()
 {
     // std::cout << "deleting quadtree " << (unsigned long) this << std::endl;
     if (root)
@@ -494,25 +495,25 @@ QuadTree<N, Content>::~QuadTree()
 //    std::cout << "~QuadTree " << this << std::endl;
 }
 
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 inline bool
-QuadTree<N, Content>::isEmpty() const
+QuadTree<N, Content, LeafType>::isEmpty() const
 {
     return root == nullptr;
 }
 
-template<BitSize N, typename Content>
-Node<Content>* QuadTree<N,Content>::getRoot()
+template<BitSize N, typename Content, typename LeafType>
+Node<Content>* QuadTree<N, Content, LeafType>::getRoot()
 {
     return root;
 }
     
     
-    template<BitSize N, typename Content>
+    template<BitSize N, typename Content, typename LeafType>
     template <typename Visitor>
-    void QuadTree<N,Content>::visitExistingTreeLeaves(const Mask* mask, Visitor &visitor)
+    void QuadTree<N, Content, LeafType>::visitExistingTreeLeaves(const Mask* mask, Visitor &visitor)
     {
-        using StackItem = StackItemTemplate<N, Content, QuadTree<N, Content>>;
+        using StackItem = StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>>;
         
         std::stack< StackItem > stack;
         stack.push( StackItem(this->root, AddressType()) );
@@ -523,7 +524,7 @@ Node<Content>* QuadTree<N,Content>::getRoot()
         
         while (!stack.empty())
         {
-            StackItemTemplate<N, Content, QuadTree<N, Content>> &topItem = stack.top();
+            StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>> &topItem = stack.top();
             NodeType*   node = topItem.node;
             AddressType addr = topItem.address;
             stack.pop();
@@ -555,7 +556,7 @@ Node<Content>* QuadTree<N,Content>::getRoot()
                         
                         AddressType childAddr = addr.childAddress(actual_indices[i]);
                         
-                        stack.push(StackItemTemplate<N, Content, QuadTree<N, Content>>(childNode, childAddr));
+                        stack.push(StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>>(childNode, childAddr));
                         mask_stack.push_back(mask_child_node);
                         
                     }
@@ -565,9 +566,9 @@ Node<Content>* QuadTree<N,Content>::getRoot()
     } // visitExistingTreeLeaves
     
 
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 Node<Content>*
-QuadTree<N, Content>::_createPath(AddressType current_address, AddressType target_address, bool include_current_address)
+QuadTree<N, Content, LeafType>::_createPath(AddressType current_address, AddressType target_address, bool include_current_address)
 {
 
 //    // create nodes bottom up of the right kind;
@@ -580,7 +581,7 @@ QuadTree<N, Content>::_createPath(AddressType current_address, AddressType targe
     int n = max_level - min_level + 1;
 
     if (! (n > 0)) {
-        throw std::string("n <= 0 on QuadTree<N, Content>::_createPath(...)");
+        throw std::string("n <= 0 on QuadTree<N, Content, LeafType>::_createPath(...)");
     }
 
     // leaf
@@ -618,105 +619,6 @@ QuadTree<N, Content>::_createPath(AddressType current_address, AddressType targe
     return current;
 }
 
-#if 0
-template<BitSize N, typename Content>
-template<typename QuadTreeAddPolicy, typename Point>
-void
-QuadTree<N, Content>::add(AddressType address, Point &point, QuadTreeAddPolicy &addPolicy)
-{
-    AddressType    current_address(0,0,0);
-    NodeType* current_node  = root;
-    NodeType* previous_node = nullptr;
-
-    if (isEmpty())
-    {
-        // new leaf nodes
-        current_node = new ScopedNode<Content,NodeType0000>(); // _newNode with nullptr: new root
-
-        root = current_node;
-        // leaf node
-
-        // When reported of a new address in the quadtree the policy
-        // might add a new Content to the node just created
-        // (e.g. associate a TimeSeries object as the content
-        // of the new node)
-        addPolicy.newNode(current_node, current_address, address);
-    }
-
-    //
-    //        Context<Content> context;
-    //        context.push(root,0,currentAddress);
-
-    while (current_address.level <= address.level)
-    {
-
-        addPolicy.addPoint(point, current_node, current_address, address);
-
-        // add point to all collections in the trail
-        // currentNode->collection.add(element); (create a more
-        // general signaling mechanism where a user can accomplish
-        // the our goal)
-
-        if (current_address == address)
-        {
-            return; // node has been created
-        }
-
-        // assuming address is contained in the current address
-        AddressType next_address = current_address.nextAddressTowards(address);
-
-        // nextAddress index on current node
-        ChildName next_node_name = next_address.nameOnParent();
-
-        bool pointer_to_next_node_is_shared = false;
-        NodeType* next_node = current_node->getChildAndShareFlag(next_node_name, pointer_to_next_node_is_shared);
-
-        if (!next_node)
-        {
-            // new leaf nodes
-            // nextNode = new ScopedNode<Content,NodeType0000>(); // _newNode with nullptr: new root
-            next_node = _createPath(current_address,address); // new ScopedNode<Content,NodeType0000>(); // _newNode with nullptr: new root
-
-
-            // create copy of currentNode with updated type
-            NodeType* current_node_updated = current_node->copyWithAddedChild(next_node, next_node_name);
-
-            //
-            if (previous_node)
-                previous_node->setChild(current_node_updated, current_address.nameOnParent());
-            else if (current_node == root)
-                root = current_node_updated;
-
-            // delete current node
-            current_node->setContentAndChildrenToNull();
-            delete current_node;
-            current_node = current_node_updated;
-
-            // new address
-            addPolicy.newNode(next_node, next_address, address);
-        }
-        else if (pointer_to_next_node_is_shared) {
-
-            NodeType* proper_next_node = next_node->makeLazyCopy();
-            current_node->setChild(proper_next_node, next_node_name, PROPER_FLAG);
-            next_node = proper_next_node;
-
-        }
-
-        previous_node   = current_node;
-        current_node    = next_node;
-        current_address = next_address;
-    }
-
-
-    // Shouldn't get here. Should exit
-    // when currentAddr == address
-    throw std::string("ooops");
-
-}
-#endif
-
-
 /*!
  * preparePath
  *
@@ -726,12 +628,12 @@ QuadTree<N, Content>::add(AddressType address, Point &point, QuadTreeAddPolicy &
  * child structure is "contained" in this quadtree except, maybe for a (suffix) path
  * containing the new data point just added in child_strucutre.
  */
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 void
-QuadTree<N, Content>::prepareProperOutdatedPath(QuadTree<N, Content> *parallel_structure,
-                                                AddressType           address,
-                                                std::vector<void*>   &parallel_replaced_nodes,
-                                                NodeStackType        &stack)
+QuadTree<N, Content, LeafType>::prepareProperOutdatedPath(QuadTree<N, Content, LeafType> *parallel_structure,
+                                                          AddressType address,
+                                                          std::vector<void*> &parallel_replaced_nodes,
+                                                          NodeStackType &stack)
 {
 
 #if 0
@@ -954,9 +856,9 @@ QuadTree<N, Content>::prepareProperOutdatedPath(QuadTree<N, Content> *parallel_s
 
 }
 
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 Node<Content>*
-QuadTree<N, Content>::trailProperPath(AddressType address, NodeStackType &stack)
+QuadTree<N, Content, LeafType>::trailProperPath(AddressType address, NodeStackType &stack)
 {
     AddressType  current_address(0,0,0);
     NodeType*    current_node  = root;
@@ -1048,9 +950,9 @@ QuadTree<N, Content>::trailProperPath(AddressType address, NodeStackType &stack)
 
 }
 
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 Node<Content>*
-QuadTree<N, Content>::find(AddressType address)  const
+QuadTree<N, Content, LeafType>::find(AddressType address)  const
 {
     if (isEmpty())
         return nullptr;
@@ -1081,20 +983,20 @@ QuadTree<N, Content>::find(AddressType address)  const
     return nullptr;
 }
 
-template<BitSize N, typename Content>
-QuadTree<N,Content> *QuadTree<N, Content>::makeLazyCopy() const
+template<BitSize N, typename Content, typename LeafType>
+QuadTree<N,Content, LeafType> *QuadTree<N, Content, LeafType>::makeLazyCopy() const
 {
-    QuadTree<N,Content> *lazy_copy = new QuadTree<N,Content>();
+    QuadTree<N,Content, LeafType> *lazy_copy = new QuadTree<N,Content,LeafType>();
     if (root) {
         lazy_copy->root = root->makeLazyCopy();
     }
     return lazy_copy;
 }
 
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 template <typename Visitor>
 void
-QuadTree<N, Content>::visitSubnodes(AddressType address, Level targetLevelOffset, Visitor &visitor)
+QuadTree<N, Content, LeafType>::visitSubnodes(AddressType address, Level targetLevelOffset, Visitor &visitor)
 {
     Level targetLevel = address.level + targetLevelOffset;
 
@@ -1103,12 +1005,12 @@ QuadTree<N, Content>::visitSubnodes(AddressType address, Level targetLevelOffset
     if (!baseNode)
         return; // there is no node
 
-    std::stack<StackItemTemplate<N, Content, QuadTree<N, Content>>> stack;
-    stack.push(StackItemTemplate<N, Content, QuadTree<N, Content>>(baseNode, address));
+    std::stack<StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>>> stack;
+    stack.push(StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>>(baseNode, address));
 
     while (!stack.empty())
     {
-        StackItemTemplate<N, Content, QuadTree<N, Content>> &topItem = stack.top();
+        StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>> &topItem = stack.top();
         NodeType*   node = topItem.node;
         AddressType addr = topItem.address;
         stack.pop();
@@ -1128,7 +1030,7 @@ QuadTree<N, Content>::visitSubnodes(AddressType address, Level targetLevelOffset
                 NodeType*   childNode = ci.getNode();
                 // NodeType*   childNode = const_cast<NodeType*>(children[i]);
                 AddressType childAddr = addr.childAddress(actual_indices[i]);
-                stack.push(StackItemTemplate<N, Content, QuadTree<N, Content>>(childNode, childAddr));
+                stack.push(StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>>(childNode, childAddr));
             }
         }
     }
@@ -1136,9 +1038,9 @@ QuadTree<N, Content>::visitSubnodes(AddressType address, Level targetLevelOffset
 
 // visit all subnodes of a certain node in the
 // requested target level.
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 template <typename Visitor>
-void QuadTree<N,Content>::visitRange(AddressType min_address, AddressType max_address, Visitor &visitor)
+void QuadTree<N,Content, LeafType>::visitRange(AddressType min_address, AddressType max_address, Visitor &visitor)
 {
     if (this->isEmpty()) // empty
         return;
@@ -1149,12 +1051,12 @@ void QuadTree<N,Content>::visitRange(AddressType min_address, AddressType max_ad
         throw std::string("Invalid range addresses");
     }
         
-    std::stack<StackItemTemplate<N, Content, QuadTree<N, Content>>> stack;
-    stack.push(StackItemTemplate<N, Content, QuadTree<N, Content>>(root, AddressType()));
+    std::stack<StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>>> stack;
+    stack.push(StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>>(root, AddressType()));
 
     while (!stack.empty())
     {
-        StackItemTemplate<N, Content, QuadTree<N, Content>> &topItem = stack.top();
+        StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>> &topItem = stack.top();
         NodeType*   node = topItem.node;
         AddressType addr = topItem.address;
         stack.pop();
@@ -1184,7 +1086,7 @@ void QuadTree<N,Content>::visitRange(AddressType min_address, AddressType max_ad
                 const NodePointer<Content> &ci = children[i];
                 NodeType*   childNode = ci.getNode();
                 AddressType childAddr = addr.childAddress(actual_indices[i]);
-                stack.push(StackItemTemplate<N, Content, QuadTree<N, Content>>(childNode, childAddr));
+                stack.push(StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>>(childNode, childAddr));
             }
         }
         else {
@@ -1198,9 +1100,9 @@ void QuadTree<N,Content>::visitRange(AddressType min_address, AddressType max_ad
 
 // static std::unordered_map<void*, qtfilter::Node*> cache;
 
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 template <typename Visitor>
-void QuadTree<N,Content>::visitSequence(const std::vector<RawAddress> &seq,
+void QuadTree<N,Content, LeafType>::visitSequence(const std::vector<RawAddress> &seq,
                                         Visitor &visitor, Cache& cache)
 {
     // preprocess and cache sequence (assuming the vector won't change)
@@ -1274,7 +1176,7 @@ void QuadTree<N,Content>::visitSequence(const std::vector<RawAddress> &seq,
     // if (!baseNode)
     //    return; // there is no node
 
-    using StackItem = StackItemTemplate<N, Content, QuadTree<N, Content>>;
+    using StackItem = StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>>;
 
 
     std::stack< StackItem > stack;
@@ -1286,7 +1188,7 @@ void QuadTree<N,Content>::visitSequence(const std::vector<RawAddress> &seq,
 
     while (!stack.empty())
     {
-        StackItemTemplate<N, Content, QuadTree<N, Content>> &topItem = stack.top();
+        StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>> &topItem = stack.top();
         NodeType*   node = topItem.node;
         AddressType addr = topItem.address;
         stack.pop();
@@ -1318,7 +1220,7 @@ void QuadTree<N,Content>::visitSequence(const std::vector<RawAddress> &seq,
 
                     AddressType childAddr = addr.childAddress(actual_indices[i]);
 
-                    stack.push(StackItemTemplate<N, Content, QuadTree<N, Content>>(childNode, childAddr));
+                    stack.push(StackItemTemplate<N, Content, QuadTree<N, Content, LeafType>>(childNode, childAddr));
                     mask_stack.push_back(mask_child_node);
 
                 }
@@ -1337,9 +1239,9 @@ void QuadTree<N,Content>::visitSequence(const std::vector<RawAddress> &seq,
     
 // visit all subnodes of a certain node in the
 // requested target level.
-template<BitSize N, typename Content>
+template<BitSize N, typename Content, typename LeafType>
 template <typename Visitor>
-void QuadTree<N,Content>::scan(Visitor &visitor)
+void QuadTree<N,Content, LeafType>::scan(Visitor &visitor)
 {
     if (this->isEmpty()) // empty
         return;
@@ -1773,3 +1675,8 @@ StackItemTemplate<N,Content,Structure>::StackItemTemplate(Node<Content>* node, A
 
 
 } // end namespace quadtree
+
+/* Local Variables:  */
+/* mode: c++         */
+/* c-basic-offset: 4 */
+/* End:              */

@@ -53,13 +53,13 @@ using contentholder::ContentHolder;
 // Forward Declarations
 //-----------------------------------------------------------------------------
 
-template <typename Content>
+template <typename Content, typename LeafType>
 struct Node;
 
-template <typename Content>
+template <typename Content, typename LeafType>
 struct Iterator;
 
-template <typename Content>
+template <typename Content, typename LeafType>
 struct FlatTree;
 
 //-----------------------------------------------------------------------------
@@ -120,7 +120,7 @@ std::ostream& operator<<(std::ostream &os, const Address<Structure>& addr);
 
 typedef uint8_t NodeType;
 
-template <typename Content>
+template <typename Content, typename LeafType>
 struct Node: public ContentHolder<Content>
 {
     static const NodeType LINK     = 1;
@@ -137,13 +137,13 @@ protected:
 // Link
 //-----------------------------------------------------------------------------
 
-template <typename Content>
-struct Link: public Node<Content>
+template <typename Content, typename LeafType>
+struct Link: public Node<Content, LeafType>
 {
     Link();
     Link(PathElement label);
 
-    Node<Content> &asNode();
+    Node<Content, LeafType> &asNode();
 
     PathElement    label;
 };
@@ -153,16 +153,17 @@ struct Link: public Node<Content>
 // FlatTree
 //-----------------------------------------------------------------------------
 
-template <typename Content>
-struct FlatTree: public Node<Content>
+template <typename Content, typename LeafType_>
+struct FlatTree: public Node<Content, LeafType_>
 {
 public:
-    typedef FlatTree<Content>              Type;
-    typedef Node<Content>                  NodeType;
+    typedef LeafType_                      LeafType;
+    typedef FlatTree<Content, LeafType>    Type;
+    typedef Node<Content, LeafType>        NodeType;
     typedef Address<Type>                  AddressType;
     typedef Content                        ContentType;
     typedef std::vector<NodeType*>         NodeStackType;
-    typedef Iterator<Content>              IteratorType;
+    typedef Iterator<Content, LeafType>    IteratorType;
 
 #if 0
 public: // static services for allocation and memory usage count
@@ -203,7 +204,7 @@ public:
                                         std::vector<void*>&   parallel_replaced_nodes,
                                         NodeStackType&        stack);
 
-    Node<Content>* find(AddressType &addr);
+    NodeType* find(AddressType &addr);
 
     void dump(std::ostream& os);
 
@@ -230,7 +231,7 @@ public:
 private:
 
 
-    Link<Content>* getLink(PathElement e, bool create_if_not_found=false);
+    Link<Content, LeafType>* getLink(PathElement e, bool create_if_not_found=false);
 
 //    Node<Content>* addChild(PathElement label);
 //    Node<Content>* getProperChildCreateIfNeed(PathElement e); //
@@ -239,9 +240,9 @@ private:
 public:
 
 #ifndef FLATTREE_VECTOR
-    small_vector::small_vector<Link<Content> > links;
+    small_vector::small_vector<Link<Content, LeafType> > links;
 #else
-    std::vector<Link<Content> > links;
+    std::vector<Link<Content, LeafType> > links;
 #endif
 
 };
@@ -251,7 +252,7 @@ public:
 //-----------------------------------------------------------------------------
 
 // Iterate through all parent-child relations
-template <typename Content>
+template <typename Content, typename LeafType>
 struct Iterator {
 
 public: // constants
@@ -259,8 +260,8 @@ public: // constants
     static const bool PROPER = false;
 
 public: // subtypes
-    typedef FlatTree<Content>                    tree_type;
-    typedef typename FlatTree<Content>::NodeType node_type;
+    typedef FlatTree<Content, LeafType>                    tree_type;
+    typedef typename FlatTree<Content, LeafType>::NodeType node_type;
 
 public: // constructor
     Iterator(const tree_type &tree);
@@ -313,13 +314,13 @@ public:
 // checkout default values on declaration they are
 // important for sync purposes.
 //
-template <typename Content>
-Iterator<Content>::Iterator(const tree_type& tree):
+template <typename Content, typename LeafType>
+Iterator<Content, LeafType>::Iterator(const tree_type& tree):
     tree(tree)
 {}
 
-template <typename Content>
-bool Iterator<Content>::next() {
+template <typename Content, typename LeafType>
+bool Iterator<Content, LeafType>::next() {
     current_index++;
     if (current_level == 0) {
         if  (current_index==0) {
@@ -352,11 +353,11 @@ bool Iterator<Content>::next() {
 // Output
 //-----------------------------------------------------------------------------
 
-template <typename Content>
-std::ostream& operator<<(std::ostream &o, const FlatTree<Content>& ft);
+template <typename Content, typename LeafType>
+std::ostream& operator<<(std::ostream &o, const FlatTree<Content, LeafType>& ft);
 
-template<typename Content>
-std::ostream& operator<<(std::ostream &o, const Link<Content>& ts);
+template<typename Content, typename LeafType>
+std::ostream& operator<<(std::ostream &o, const Link<Content, LeafType>& ts);
 
 //-----------------------------------------------------------------------------
 // Impl. Address Template Members
@@ -450,27 +451,27 @@ PathElement Address<Structure>::operator[](PathIndex index) const
 // Node Impl.
 //----------------------------------------------------------------------------
 
-template <typename Content>
-Node<Content>::Node(NodeType type):
+template <typename Content, typename LeafType>
+Node<Content, LeafType>::Node(NodeType type):
     ContentHolder<Content>()
 {
     this->setUserData(type);
 }
 
-template <typename Content>
+template <typename Content, typename LeafType>
 NumChildren
-Node<Content>::getNumChildren() const
+Node<Content, LeafType>::getNumChildren() const
 {
-    using FlatTree = FlatTree<Content>;
-    if (getNodeType() == Node<Content>::LINK)
+    using FlatTree = FlatTree<Content, LeafType>;
+    if (getNodeType() == Node<Content, LeafType>::LINK)
         return 0;
     else // flattree
         return (reinterpret_cast<const FlatTree*>(this))->links.size();
 }
 
-template <typename Content>
+template <typename Content, typename LeafType>
 NodeType
-Node<Content>::getNodeType() const
+Node<Content, LeafType>::getNodeType() const
 {
     return this->getUserData();
 }
@@ -479,45 +480,45 @@ Node<Content>::getNodeType() const
 // Impl. Link Template Memebers
 //-----------------------------------------------------------------------------
 
-template <typename Content>
-Link<Content>::Link():
-    Node<Content>(Node<Content>::LINK),
+template <typename Content, typename LeafType>
+Link<Content, LeafType>::Link():
+    Node<Content, LeafType>(Node<Content, LeafType>::LINK),
     label(0)
 {}
 
-template <typename Content>
-Link<Content>::Link(PathElement label):
-    Node<Content>(Node<Content>::LINK),
+template <typename Content, typename LeafType>
+Link<Content, LeafType>::Link(PathElement label):
+    Node<Content, LeafType>(Node<Content, LeafType>::LINK),
     label(label)
 {}
 
-template <typename Content>
-Node<Content> &Link<Content>::asNode()
+template <typename Content, typename LeafType>
+Node<Content, LeafType> &Link<Content, LeafType>::asNode()
 {
-    return static_cast<Node<Content>&>(*this);
+    return static_cast<Node<Content, LeafType>&>(*this);
 }
 
 //-----------------------------------------------------------------------------
 // Impl. FlatTree Template Members
 //-----------------------------------------------------------------------------
 
-template <typename Content>
-uint64_t FlatTree<Content>::count_new = 0;
+template <typename Content, typename LeafType>
+uint64_t FlatTree<Content, LeafType>::count_new = 0;
 
-template <typename Content>
-uint64_t FlatTree<Content>::count_delete = 0;
+template <typename Content, typename LeafType>
+uint64_t FlatTree<Content, LeafType>::count_delete = 0;
 
-template <typename Content>
-uint64_t FlatTree<Content>::count_entries = 0;
+template <typename Content, typename LeafType>
+uint64_t FlatTree<Content, LeafType>::count_entries = 0;
 
-template <typename Content>
-void* FlatTree<Content>::operator new(size_t size) {
+template <typename Content, typename LeafType>
+void* FlatTree<Content, LeafType>::operator new(size_t size) {
     count_new++;
     return ::operator new(size);
 }
 
-template <typename Content>
-void FlatTree<Content>::operator delete(void *p) {
+template <typename Content, typename LeafType>
+void FlatTree<Content, LeafType>::operator delete(void *p) {
     count_delete++;
     ::operator delete(p);
 }
@@ -529,9 +530,9 @@ void FlatTree<Content>::operator delete(void *p) {
 // is going to be sent to all the contents of the
 // given path.
 //
-template <typename Content>
-Node<Content>*
-FlatTree<Content>::trailProperPath(AddressType addr, FlatTree::NodeStackType &stack)
+template <typename Content, typename LeafType>
+Node<Content, LeafType>*
+FlatTree<Content, LeafType>::trailProperPath(AddressType addr, FlatTree::NodeStackType &stack)
 {
     assert(addr.getPathSize()<=1);
 
@@ -540,7 +541,7 @@ FlatTree<Content>::trailProperPath(AddressType addr, FlatTree::NodeStackType &st
 
     if (addr.getPathSize() == 1)
     {
-        Node<Content> *child = this->getLink(addr.singleton_path_element, true);
+        Node<Content, LeafType> *child = this->getLink(addr.singleton_path_element, true);
         stack.push_back(child); // add root
         return child;
     }
@@ -550,12 +551,12 @@ FlatTree<Content>::trailProperPath(AddressType addr, FlatTree::NodeStackType &st
 }
 
 
-template <typename Content>
+template <typename Content, typename LeafType>
 void
-FlatTree<Content>::prepareProperOutdatedPath(FlatTree*                  parallel_structure,
-                                             FlatTree::AddressType      address,
-                                             std::vector<void*>&        parallel_replaced_nodes,
-                                             FlatTree::NodeStackType&   stack)
+FlatTree<Content, LeafType>::prepareProperOutdatedPath(FlatTree*                  parallel_structure,
+                                                       FlatTree::AddressType      address,
+                                                       std::vector<void*>&        parallel_replaced_nodes,
+                                                       FlatTree::NodeStackType&   stack)
 {
     //std::cout << "FlatTree<Content>::prepareProperOutdatedPath(...): address == " << address << std::endl;
     
@@ -582,7 +583,7 @@ FlatTree<Content>::prepareProperOutdatedPath(FlatTree*                  parallel
         bool needs_to_update_child = true;
 
         // get child. maybe doesn't need to be updated...
-        Node<Content> *child = this->getLink(address.singleton_path_element, false);
+        Node<Content, LeafType> *child = this->getLink(address.singleton_path_element, false);
         if (child == nullptr) {
             child = this->getLink(address.singleton_path_element, true);
             child->setSharedContent(parallel_child->getContent());
@@ -616,7 +617,7 @@ FlatTree<Content>::prepareProperOutdatedPath(FlatTree*                  parallel
     }
 
     else {
-        Node<Content> *child = this->getLink(address.singleton_path_element, true);
+        Node<Content, LeafType> *child = this->getLink(address.singleton_path_element, true);
         stack.push_back(child);
         stack.push_back(nullptr);
         // return child;
@@ -629,9 +630,9 @@ FlatTree<Content>::prepareProperOutdatedPath(FlatTree*                  parallel
 // The idea is that a message is going to be
 // sent to all the contents of the given path.
 //
-template <typename Content>
-Node<Content>*
-FlatTree<Content>::find(AddressType &addr)
+template <typename Content, typename LeafType>
+Node<Content, LeafType>*
+FlatTree<Content, LeafType>::find(AddressType &addr)
 {
     assert(addr.getPathSize()<=1);
 
@@ -642,14 +643,14 @@ FlatTree<Content>::find(AddressType &addr)
     }
     else // if (addr.getPathSize() == 1)
     {
-        Node<Content> *child = this->getLink(addr.singleton_path_element, false);
+        Node<Content, LeafType> *child = this->getLink(addr.singleton_path_element, false);
         return child;
     }
 }
 
-template <typename Content>
+template <typename Content, typename LeafType>
 template <typename Visitor>
-void FlatTree<Content>::visitSubnodes(AddressType address, Level targetLevelOffset, Visitor &visitor)
+void FlatTree<Content, LeafType>::visitSubnodes(AddressType address, Level targetLevelOffset, Visitor &visitor)
 {
 //    Level targetLevel = (address.isEmpty() ? 0 : 1) + targetLevelOffset;
 //    assert(targetLevel <= 1);
@@ -664,45 +665,16 @@ void FlatTree<Content>::visitSubnodes(AddressType address, Level targetLevelOffs
     }
     else if (address.isEmpty() && targetLevelOffset == 1) {
         // loop
-        for (Link<Content> &link: this->links) {
+        for (Link<Content, LeafType> &link: this->links) {
             AddressType addr(link.label);
             visitor.visit(static_cast<NodeType*>(&link), addr);
         }
     }
 }
 
-#if 0
-//
-// Report each link once
-//
-template <typename Content>
+template <typename Content, typename LeafType>
 template <typename Visitor>
-void FlatTree<Content>::visitAllNodes(Visitor &visitor)
-{
-//    Level targetLevel = (address.isEmpty() ? 0 : 1) + targetLevelOffset;
-//    assert(targetLevel <= 1);
-    NodeType *node = find(address);
-    if (!node) {
-        return; // no node fits the bill
-    }
-
-    if (targetLevelOffset == 0) {
-        visitor.visit(node, address);
-    }
-    else if (address.isEmpty() && targetLevelOffset == 1) {
-        // loop
-        for (Link<Content> &link: this->links) {
-            AddressType addr(link.label);
-            visitor.visit(static_cast<NodeType*>(&link), addr);
-        }
-    }
-}
-#endif
-
-
-template <typename Content>
-template <typename Visitor>
-void FlatTree<Content>::visitRange(AddressType min_address, AddressType max_address, Visitor &visitor)
+void FlatTree<Content, LeafType>::visitRange(AddressType min_address, AddressType max_address, Visitor &visitor)
 {
     for (PathElement e=min_address.singleton_path_element;e<=max_address.singleton_path_element;e++)
     {
@@ -715,33 +687,33 @@ void FlatTree<Content>::visitRange(AddressType min_address, AddressType max_addr
 
 
 // polygon visit (cache first preprocessing)
-template <typename Content>
+template <typename Content, typename LeafType>
 template <typename Visitor>
-void FlatTree<Content>::visitSequence(const std::vector<RawAddress> &seq, Visitor &visitor, Cache& cache) {
+void FlatTree<Content, LeafType>::visitSequence(const std::vector<RawAddress> &seq, Visitor &visitor, Cache& cache) {
     for (auto raw_address: seq) {
         this->visitSubnodes(AddressType(raw_address),0,visitor);
     }
 }
 
-    template<typename Content>
-    template <typename Visitor>
-    void FlatTree<Content>::visitExistingTreeLeaves(const Mask* mask, Visitor &visitor) {
-        throw std::runtime_error("not available");
-    }
+template <typename Content, typename LeafType>
+template <typename Visitor>
+void FlatTree<Content, LeafType>::visitExistingTreeLeaves(const Mask* mask, Visitor &visitor) {
+    throw std::runtime_error("not available");
+}
 
 //
 // Node Implementation
 //
 
-template <typename Content>
-FlatTree<Content>::FlatTree(): Node<Content>(Node<Content>::FLATTREE)
+template <typename Content, typename LeafType>
+FlatTree<Content, LeafType>::FlatTree(): Node<Content, LeafType>(Node<Content, LeafType>::FLATTREE)
 {}
 
-template <typename Content>
-FlatTree<Content>::~FlatTree()
+template <typename Content, typename LeafType>
+FlatTree<Content, LeafType>::~FlatTree()
 {
     // delete content of children nodes
-    for (Link<Content> &link: this->links) {
+    for (Link<Content, LeafType> &link: this->links) {
         if (link.contentIsProper()) {
             delete link.getContent();
         }
@@ -755,8 +727,8 @@ FlatTree<Content>::~FlatTree()
 //    std::cerr << "~FlatTree " << this << std::endl;
 }
 
-template <typename Content>
-void FlatTree<Content>::dump(std::ostream& os)
+template <typename Content, typename LeafType>
+void FlatTree<Content, LeafType>::dump(std::ostream& os)
 {
     os << "FlatTree, tag: "
        << (int) this->data.getTag()
@@ -775,11 +747,11 @@ void FlatTree<Content>::dump(std::ostream& os)
 }
 
 
-template <typename Content>
-FlatTree<Content>*
-FlatTree<Content>::makeLazyCopy() const
+template <typename Content, typename LeafType>
+FlatTree<Content, LeafType>*
+FlatTree<Content, LeafType>::makeLazyCopy() const
 {
-    FlatTree<Content> *copy = new FlatTree<Content>();
+    FlatTree<Content, LeafType> *copy = new FlatTree<Content, LeafType>();
 
     copy->setSharedContent(this->getContent()); // TODO: check the semantics of the lazy copy
                                                 // in regards to the content
@@ -793,21 +765,21 @@ FlatTree<Content>::makeLazyCopy() const
     return copy;
 }
 
-template <typename Content>
-inline bool compare_links(const Link<Content> &a, const Link<Content> &b)
+template <typename Content, typename LeafType>
+inline bool compare_links(const Link<Content, LeafType> &a, const Link<Content, LeafType> &b)
 {
     return (a.label < b.label);
 }
 
-template <typename Content>
-Link<Content> *
-FlatTree<Content>::getLink(PathElement e, bool create_if_not_found)
+template <typename Content, typename LeafType>
+Link<Content, LeafType> *
+FlatTree<Content, LeafType>::getLink(PathElement e, bool create_if_not_found)
 {
-    Link<Content> link(e);
-    auto it = std::lower_bound(links.begin(),links.end(),link,compare_links<Content>);
+    Link<Content, LeafType> link(e);
+    auto it = std::lower_bound(links.begin(),links.end(),link,compare_links<Content, LeafType>);
     if (it != links.end() && it->label == e)
     {
-        return const_cast<Link<Content>*>(&*it);
+        return const_cast<Link<Content, LeafType>*>(&*it);
     }
     else
     {
@@ -817,27 +789,27 @@ FlatTree<Content>::getLink(PathElement e, bool create_if_not_found)
         {
             count_entries++; // global count of nodes of level 1
 
-            Link<Content> aux(e);
+            Link<Content, LeafType> aux(e);
             auto it2 = links.insert(it, aux);
-            return const_cast<Link<Content>*>(&*it2);
+            return const_cast<Link<Content, LeafType>*>(&*it2);
 
         }
     }
 }
 
-template <typename Content>
-Count FlatTree<Content>::getMemoryUsage() const
+template <typename Content, typename LeafType>
+Count FlatTree<Content, LeafType>::getMemoryUsage() const
 {
-    Count result = sizeof(FlatTree<Content>);
-    result += links.size() * sizeof(Link<Content>);
+    Count result = sizeof(FlatTree<Content, LeafType>);
+    result += links.size() * sizeof(Link<Content, LeafType>);
 //    for (auto &link: links)
 //        if (link.proper)
 //            result += link.node->getMemoryUsage();
     return result;
 }
 
-template <typename Content>
-Node<Content> *FlatTree<Content>::getRoot()
+template <typename Content, typename LeafType>
+Node<Content, LeafType> *FlatTree<Content, LeafType>::getRoot()
 {
     return this;
 }
@@ -846,16 +818,16 @@ Node<Content> *FlatTree<Content>::getRoot()
 // Output
 //-----------------------------------------------------------------------------
 
-template <typename Content>
-std::ostream& operator<<(std::ostream &o, const FlatTree<Content>& ft)
+template <typename Content, typename LeafType>
+std::ostream& operator<<(std::ostream &o, const FlatTree<Content, LeafType>& ft)
 {
     o << "[flattree: " << ft.getNumChildren() << "] ";
     return o;
 }
 
-template<typename Content>
+template<typename Content, typename LeafType>
 std::ostream& operator<<(std::ostream &o,
-                         const Link<Content>& ts)
+                         const Link<Content, LeafType>& ts)
 {
     o << "[Link: " << static_cast<int>(ts.label) << "] ";
     return o;
@@ -870,3 +842,8 @@ std::ostream& operator<<(std::ostream &os, const Address<Structure>& addr)
 }
 
 }
+
+/* Local Variables:  */
+/* mode: c++         */
+/* c-basic-offset: 4 */
+/* End:              */
