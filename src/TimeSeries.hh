@@ -56,6 +56,8 @@ struct TimeSeries
 
     using VectorType = typename VectorType<Entry, Entry::front_size <= 2>::type;
 
+    using LeafType = TimeSeries<Entry>;
+
 public:
     // explicit TimeSeries(Key &key);
     // void setKey(Key &key);
@@ -73,6 +75,11 @@ public:
     double getWindowTotal(Timestamp a, Timestamp b) const;
 
     void dump(std::ostream &os) const;
+
+    TimeSeries *getLeaf() const
+    {
+        return this;
+    }
 
 public: // change back to public because of the ObjectFactory deseralization need
 
@@ -366,3 +373,9 @@ std::ostream& operator<<(std::ostream &o,
 }
 
 } // end namespace timeseries
+
+
+/* Local Variables:  */
+/* mode: c++         */
+/* c-basic-offset: 4 */
+/* End:              */

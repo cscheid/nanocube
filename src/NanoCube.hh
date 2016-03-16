@@ -147,7 +147,7 @@ struct f8 { static const int size = 8;};
 
 template <typename Content, int NumBytes, typename LeafType>
 struct expand_flattree {
-    using type = flattree_n::FlatTree<NumBytes, Content>; // general implementation
+    using type = flattree_n::FlatTree<NumBytes, Content, LeafType>; // general implementation
 };
 
   template <typename Content, typename LeafType>

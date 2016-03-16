@@ -35,6 +35,8 @@ struct UserDataAndFlag
 template <typename Content>
 struct ContentHolder
 {
+    typedef typename Content::LeafType LeafType;
+
     ContentHolder();
 
     void        setProperContent(Content *content);
@@ -51,6 +53,12 @@ struct ContentHolder
 
     void        copyContentAndProperFlag(const ContentHolder& c);
 
+    LeafType    *getLeaf() const
+    {
+        getContent()->getLeaf();
+    };
+
+  
 private:
 
     UserDataAndFlag userDataAndFlag() const;
@@ -197,3 +205,8 @@ inline UserData ContentHolder<Content>::getUserData() const
 }
 
 }
+
+/* Local Variables:  */
+/* mode: c++         */
+/* c-basic-offset: 4 */
+/* End:              */

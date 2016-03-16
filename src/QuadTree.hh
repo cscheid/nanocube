@@ -188,7 +188,7 @@ public:
 
 private:
 
-    Node<Content> *_createPath(AddressType current_address, AddressType target_address, bool include_current_address);
+    NodeType *_createPath(AddressType current_address, AddressType target_address, bool include_current_address);
 
 public:
 

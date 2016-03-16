@@ -682,3 +682,8 @@ ScopedNode<Content, NodeType>::ScopedNode(): Node<Content>(NodeType::key)
 {}
 
 } // end namespace quadtree
+
+/* Local Variables:  */
+/* mode: c++         */
+/* c-basic-offset: 4 */
+/* End:              */

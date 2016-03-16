@@ -16,11 +16,11 @@
 
 namespace flattree_n {
     
-    using DimensionPath = std::vector<int>; // matching tree_store_nanocube.hh
+using DimensionPath = std::vector<int>; // matching tree_store_nanocube.hh
     
-    using Mask = polycover::labeled_tree::Node;
+using Mask = polycover::labeled_tree::Node;
     
-    using Cache = nanocube::Cache;
+using Cache = nanocube::Cache;
 
 using PathSize   = uint8_t;
 using Level      = int32_t;
@@ -36,7 +36,6 @@ template <typename Structure>
 struct Address {
 public:
     static const RawAddress Root = ~0UL >> (8 - Structure::Size) * 8;
-public:
 
     Address();
 
@@ -52,17 +51,6 @@ public:
 
     DimensionPath getDimensionPath() const;
     
-    
-//    bool isEmpty() const;
-
-//    bool operator==(const Address &addr) const;
-//    bool operator< (const Address &addr) const;
-
-    // new stuff (to enable composition on a nested LOD structure)
-    // PathElement operator[](PathIndex index) const;
-    // PathSize    getPathSize() const;
-    // size_t hash() const;
-
     RawAddress raw_address;
 
 };
@@ -113,7 +101,6 @@ public:
     int current_index { -1 };
 
     std::string current_label;
-
 };
 
 
@@ -125,7 +112,7 @@ using NumChildren = uint32_t;
 
 enum NodeType { LINK=1, FLATTREE=2 };
 
-template <NumBytes N, typename Content>
+template <NumBytes N, typename Content, typename LeafType>
 struct Node: public contentholder::ContentHolder<Content> {
     NumChildren getNumChildren() const;
     NodeType    getNodeType() const;
@@ -138,9 +125,9 @@ protected:
 //--------------------------------------------------------------------
 
 template <typename Structure>
-struct Link: public Node<Structure::Size, typename Structure::ContentType>
+struct Link: public Node<Structure::Size, typename Structure::ContentType, typename Structure::LeafType>
 {
-    using NodeType = Node<Structure::Size, typename Structure::ContentType>;
+    using NodeType = Node<Structure::Size, typename Structure::ContentType, typename Structure::LeafType>;
 
     Link();
     Link(RawAddress addr);
@@ -162,8 +149,8 @@ struct Link: public Node<Structure::Size, typename Structure::ContentType>
 // FlatTree
 //--------------------------------------------------------------------
 
-template <NumBytes N, typename Content>
-struct FlatTree: public Node<N, Content> {
+template <NumBytes N, typename Content, typename LeafType_>
+struct FlatTree: public Node<N, Content, LeafType_> {
 
 public: // constants
 
@@ -172,8 +159,9 @@ public: // constants
 
 public: // subtypes
 
+    using LeafType      = LeafType_;
     using ContentType   = Content;
-    using NodeType      = Node<Size, ContentType>;
+    using NodeType      = Node<Size, ContentType, LeafType>;
     using LinkType      = Link<FlatTree>;
     using AddressType   = Address<FlatTree>;
     using NodeStackType = std::vector<NodeType*>;
@@ -301,17 +289,17 @@ bool Address<Structure>::read(std::istream &is)
 // Node Impl.
 //-----------------------------------------------------------------------------
 
-template<NumBytes N, typename Content>
-Node<N, Content>::Node(NodeType type):
+template<NumBytes N, typename Content, typename LeafType>
+Node<N, Content, LeafType>::Node(NodeType type):
     contentholder::ContentHolder<Content>()
 {
     this->setUserData(type);
 }
 
-template <NumBytes N, typename Content>
-auto Node<N,Content>::getNumChildren() const -> NumChildren
+template <NumBytes N, typename Content, typename LeafType>
+auto Node<N, Content, LeafType>::getNumChildren() const -> NumChildren
 {
-    using FlatTree = FlatTree<N,Content>;
+    using FlatTree = FlatTree<N, Content, LeafType>;
 
     if (getNodeType() == LINK)
         return 0;
@@ -319,8 +307,8 @@ auto Node<N,Content>::getNumChildren() const -> NumChildren
         return (reinterpret_cast<const FlatTree*>(this))->links.size();
 }
 
-template <NumBytes N, typename Content>
-auto Node<N, Content>::getNodeType() const -> NodeType
+template <NumBytes N, typename Content, typename LeafType>
+auto Node<N, Content, LeafType>::getNodeType() const -> NodeType
 {
     return (NodeType) this->getUserData();
 }
@@ -355,13 +343,13 @@ RawAddress Link<Structure>::getRawAddress() const
 // FlatTree Impl.
 //-----------------------------------------------------------------------------
 
-template<NumBytes N, typename Content>
-FlatTree<N, Content>::FlatTree():
+template<NumBytes N, typename Content, typename LeafType>
+FlatTree<N, Content, LeafType>::FlatTree():
     NodeType(FLATTREE)
 {}
 
-template<NumBytes N, typename Content>
-auto FlatTree<N, Content>::find(const FlatTree::AddressType &addr) -> NodeType*
+template<NumBytes N, typename Content, typename LeafType>
+auto FlatTree<N, Content, LeafType>::find(const FlatTree::AddressType &addr) -> NodeType*
 {
     if (addr.isEmpty()) {
         return this;
@@ -371,11 +359,11 @@ auto FlatTree<N, Content>::find(const FlatTree::AddressType &addr) -> NodeType*
     }
 }
 
-template<NumBytes N, typename Content>
-void FlatTree<N, Content>::prepareProperOutdatedPath(FlatTree*                parallel_structure,
-                                                     FlatTree::AddressType    address,
-                                                     std::vector<void *>&     parallel_replaced_nodes,
-                                                     FlatTree::NodeStackType& stack)
+template<NumBytes N, typename Content, typename LeafType>
+void FlatTree<N, Content, LeafType>::prepareProperOutdatedPath(FlatTree*                parallel_structure,
+                                                               FlatTree::AddressType    address,
+                                                               std::vector<void *>&     parallel_replaced_nodes,
+                                                               FlatTree::NodeStackType& stack)
 {
     // same implementation as trailProperPath
     // there is no gain on a flattree to share
@@ -448,9 +436,9 @@ void FlatTree<N, Content>::prepareProperOutdatedPath(FlatTree*                pa
 
 
 
-template <NumBytes N, typename Content>
+template <NumBytes N, typename Content, typename LeafType>
 template <typename Visitor>
-void FlatTree<N, Content>::visitSubnodes(AddressType address, Level targetLevelOffset, Visitor &visitor)
+void FlatTree<N, Content, LeafType>::visitSubnodes(AddressType address, Level targetLevelOffset, Visitor &visitor)
 {
 //    Level targetLevel = (address.isEmpty() ? 0 : 1) + targetLevelOffset;
 //    assert(targetLevel <= 1);
@@ -471,9 +459,9 @@ void FlatTree<N, Content>::visitSubnodes(AddressType address, Level targetLevelO
     }
 }
 
-template <NumBytes N, typename Content>
+template <NumBytes N, typename Content, typename LeafType>
 template <typename Visitor>
-void FlatTree<N, Content>::visitRange(AddressType min_address, AddressType max_address, Visitor &visitor)
+void FlatTree<N, Content, LeafType>::visitRange(AddressType min_address, AddressType max_address, Visitor &visitor)
 {
     for (RawAddress e=min_address.raw();e<=max_address.raw();e++)
     {
@@ -486,9 +474,9 @@ void FlatTree<N, Content>::visitRange(AddressType min_address, AddressType max_a
     }
 }
 
-template <NumBytes N, typename Content>
+template <NumBytes N, typename Content, typename LeafType>
 template <typename Visitor>
-void FlatTree<N, Content>::visitSequence(const std::vector<RawAddress> &seq, Visitor &visitor, Cache& cache)
+void FlatTree<N, Content, LeafType>::visitSequence(const std::vector<RawAddress> &seq, Visitor &visitor, Cache& cache)
 {
     for (auto raw_address: seq) {
         this->visitSubnodes(AddressType(raw_address),0,visitor);
@@ -497,15 +485,15 @@ void FlatTree<N, Content>::visitSequence(const std::vector<RawAddress> &seq, Vis
 }
     
     
-    template<NumBytes N, typename Content>
-    template <typename Visitor>
-    void FlatTree<N,Content>::visitExistingTreeLeaves(const Mask* mask, Visitor &visitor) {
-        throw std::runtime_error("not available");
-    }
+template<NumBytes N, typename Content, typename LeafType>
+template <typename Visitor>
+void FlatTree<N, Content, LeafType>::visitExistingTreeLeaves(const Mask* mask, Visitor &visitor) {
+    throw std::runtime_error("not available");
+}
 
 
-template<NumBytes N, typename Content>
-auto FlatTree<N, Content>::getLink(RawAddress raw_address, bool create_if_not_found) -> LinkType*
+template<NumBytes N, typename Content, typename LeafType>
+auto FlatTree<N, Content, LeafType>::getLink(RawAddress raw_address, bool create_if_not_found) -> LinkType*
 {
     auto compare = [](const Link<FlatTree>& link, RawAddress raw_address) {
         return (link.getRawAddress() < raw_address);
@@ -529,8 +517,8 @@ auto FlatTree<N, Content>::getLink(RawAddress raw_address, bool create_if_not_fo
     }
 }
 
-template <NumBytes N, typename Content>
-auto FlatTree<N, Content>::makeLazyCopy() const -> FlatTree*
+template <NumBytes N, typename Content, typename LeafType>
+auto FlatTree<N, Content, LeafType>::makeLazyCopy() const -> FlatTree*
 {
     FlatTree *copy = new FlatTree();
 
@@ -544,9 +532,8 @@ auto FlatTree<N, Content>::makeLazyCopy() const -> FlatTree*
     return copy;
 }
 
-
-template <NumBytes N, typename Content>
-FlatTree<N, Content>::~FlatTree()
+template <NumBytes N, typename Content, typename LeafType>
+FlatTree<N, Content, LeafType>::~FlatTree()
 {
     // delete content of children nodes
     for (LinkType &link: this->links) {
@@ -563,14 +550,14 @@ FlatTree<N, Content>::~FlatTree()
     //    std::cerr << "~FlatTree " << this << std::endl;
 }
 
-template <NumBytes N, typename Content>
-auto FlatTree<N, Content>::getRoot() -> NodeType*
+template <NumBytes N, typename Content, typename LeafType>
+auto FlatTree<N, Content, LeafType>::getRoot() -> NodeType*
 {
     return this;
 }
 
-template <NumBytes N, typename Content>
-void FlatTree<N, Content>::dump(std::ostream& os)
+template <NumBytes N, typename Content, typename LeafType>
+void FlatTree<N, Content, LeafType>::dump(std::ostream& os)
 {
     os << "FlatTree, tag: "
        << (int) this->data.getTag()
@@ -662,3 +649,8 @@ bool Iterator<Structure>::isProper() const {
 }
 
 } // flattree_n
+
+/* Local Variables:  */
+/* mode: c++         */
+/* c-basic-offset: 4 */
+/* End:              */
