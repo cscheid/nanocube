@@ -94,7 +94,6 @@ struct c2  { static const int Kind = FLATTREE; static const int NumBytes = 2; };
 struct c3  { static const int Kind = FLATTREE; static const int NumBytes = 3; };
 struct c4  { static const int Kind = FLATTREE; static const int NumBytes = 4; };
 
-
 // quadtrees levels
 struct q0  { static const int Kind = QUADTREE; static const int Levels = 0 ; };
 struct q1  { static const int Kind = QUADTREE; static const int Levels = 1 ; };
@@ -191,7 +190,7 @@ struct mapDimensionNameToDimensionType {
 // Unfold
 //------------------------------------------------------------------------------
 
-template <typename dim_names, typename CurrentDimensionTypesList, typename Content, bool Done=false>
+template <typename dim_names, typename CurrentDimensionTypesList, typename Content, typename LeafType, bool Done=false>
 struct Unfold {
 
     typedef typename mpl::back<dim_names>::type current_dimension_name;
@@ -207,11 +206,12 @@ struct Unfold {
     typedef typename Unfold<next_dimension_names_input_list,
                             current_dimension_types_list,
                             current_dimension_type,
+                            LeafType,
                             EmptyFlag>::type type;
 };
 
-template <typename dim_names, typename CurrentDimensionTypesList, typename Content>
-struct Unfold<dim_names, CurrentDimensionTypesList, Content, true> {
+template <typename dim_names, typename CurrentDimensionTypesList, typename Content, typename LeafType>
+struct Unfold<dim_names, CurrentDimensionTypesList, Content, LeafType, true> {
     typedef CurrentDimensionTypesList type;
 };
 
@@ -226,7 +226,7 @@ struct translateDimensionNamesToDimensionsTypes {
 
     static const bool EmptyFlag = mpl::empty<dim_names>::type::value;
 
-    typedef typename Unfold<dim_names, EmptyList, LeafType, EmptyFlag>::type type;
+    typedef typename Unfold<dim_names, EmptyList, LeafType, LeafType, EmptyFlag>::type type;
 };
 
 //------------------------------------------------------------------------------
@@ -264,14 +264,11 @@ struct NanoCubeTemplate {
 public: // subtypes
 
     typedef NanoCubeTemplate<dim_names, var_types> nanocube_type;
-
     typedef var_types variable_types;
+    typedef dim_names dimension_names;
 
     typedef TimeSeriesEntryType<variable_types> entry_type;
-
     typedef timeseries::TimeSeries<entry_type> time_series_type;
-
-    typedef dim_names dimension_names;
 
     typedef typename translateDimensionNamesToDimensionsTypes<dim_names, time_series_type>::type dimension_types;
 
