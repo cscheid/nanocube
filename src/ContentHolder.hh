@@ -55,7 +55,7 @@ struct ContentHolder
 
     LeafType    *getLeaf() const
     {
-        getContent()->getLeaf();
+        return getContent()->getLeaf();
     };
 
   

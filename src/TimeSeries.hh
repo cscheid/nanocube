@@ -76,7 +76,7 @@ public:
 
     void dump(std::ostream &os) const;
 
-    TimeSeries *getLeaf() const
+    TimeSeries *getLeaf()
     {
         return this;
     }
