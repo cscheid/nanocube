@@ -167,9 +167,10 @@ nc_fixed_vector_CXXFLAGS = $(AM_CXXFLAGS) \
     -D_GLIBCXX_USE_NANOSLEEP \
     -D_GLIBCXX_USE_SCHED_YIELD \
     -DLIST_DIMENSION_NAMES=q25,c1 \
-    -DLIST_VARIABLE_TYPES=u2,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8 \
+    -DLIST_VARIABLE_TYPES=6 \
     -DVERSION=\"$(VERSION)\"
 nc_fixed_vector_SOURCES =\
     $(nc_SOURCES)
 
+# u2,f8,f8,f8,f8,f8,f8
 #-DLIST_VARIABLE_TYPES=u2,f8,f8

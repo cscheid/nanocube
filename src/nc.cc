@@ -439,9 +439,23 @@ std::vector<std::string> &split(const std::string &s, char delim,
 // NanoCube
 //------------------------------------------------------------------------------
 
+template <int N>
+struct make_vector_of_floats;
+
+template <>
+struct make_vector_of_floats<0> {
+  typedef boost::mpl::vector<u2> type;
+};
+
+template <int N>
+struct make_vector_of_floats {
+  typedef typename make_vector_of_floats<N-1>::type PrevVector;
+  typedef typename boost::mpl::push_back<PrevVector, f8>::type type;
+};
+
 typedef nanocube::NanoCubeTemplate<
     boost::mpl::vector<LIST_DIMENSION_NAMES>,
-    boost::mpl::vector<LIST_VARIABLE_TYPES>> NanoCube;
+    typename make_vector_of_floats<LIST_VARIABLE_TYPES>::type> NanoCube;
 
 using Entry   = typename NanoCube::entry_type;
 using Address = typename NanoCube::address_type;

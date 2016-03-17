@@ -8,7 +8,7 @@
 namespace nanocube {
 
 // The dimension of the variable
-static const int VAR_VEC_SIZE = 10;
+static const int VAR_VEC_SIZE = LIST_VARIABLE_TYPES;
 
 //-----------------------------------------------------------------
 // SimpleConfig
