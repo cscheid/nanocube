@@ -4,9 +4,8 @@
 
 Nanocubes now support aggregation on multi-dimensional floating point values. Currently, you need to manually change some configurations in the source code:
 
-1. At the begining of `/src/tree_store_nanocube.hh`, the number of dimensions, for example two dimensions, is defined by `static const int VAR_VEC_SIZE = 2`. You can change `2` to any other number you need.
-2. At the bottom of `/src/MakeFile.am`, modify `-DLIST_DIMENSION_NAMES` and `-DLIST_VARIABLE_TYPES` to adapt to your data's schema. For variable types, if your variable has two dimensions, it should be `-DLIST_VARIABLE_TYPES=u2,f8,f8`. For five dimensions, it should be `-DLIST_VARIABLE_TYPES=u2,f8,f8,f8,f8,f8`. Please remember you should always add an extra time dimension at the beginning.
-3. At the begining of `/src/nc.cc`, define `BOOST_MPL_LIMIT_VECTOR_SIZE` to the desired maximum arity rounded up to the nearest multiple of ten. See [BOOST_MPL_LIMIT_VECTOR_SIZE](http://www.boost.org/doc/libs/1_60_0/libs/mpl/doc/refmanual/limit-vector-size.html) for detail. If the desired vector size is larger than 50, the Boost source code should be changed. Follow the instructions [here](http://stackoverflow.com/a/29627158). *TODO*: Add more detail about this.
+1. At the bottom of `/src/MakeFile.am`, modify `-DLIST_DIMENSION_NAMES` and `-DLIST_VARIABLE_TYPES` to adapt to your data's schema. For variables(excluding the time dimension), set `-DLIST_VARIABLE_TYPES` to be the number of desired dimensions. For example, `-DLIST_VARIABLE_TYPES=6` if the vairable has six dimensions. The time dimension is automatically inserted and set to type `u2`.
+2. [Optional] At the begining of `/src/nc.cc`, define `BOOST_MPL_LIMIT_VECTOR_SIZE` to the desired maximum arity rounded up to the nearest multiple of ten. By default, it is set to 50. See [BOOST_MPL_LIMIT_VECTOR_SIZE](http://www.boost.org/doc/libs/1_60_0/libs/mpl/doc/refmanual/limit-vector-size.html) for detail. If the desired vector size is larger than 50, the Boost source code should be changed. Please go to the source code of Boost. Run the script `BOOST_SRC/libs/mpl/preprocessed/boost_mpl_preprocessed.py` and follow the prompted help instructions.
 
 ## Compiling
 
