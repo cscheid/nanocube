@@ -1,5 +1,5 @@
 //Categorical Variable
-function CatVar(dim, valnames, displaynumcat, alpha_order){
+function CatVar(dim, valnames, displaynumcat, alpha_order, value_function){
     //Display 25 categories by default
     displaynumcat=(typeof displaynumcat==="undefined")? 25:displaynumcat;    
     alpha_order=(typeof alpha_order==="undefined")? true:alpha_order;
@@ -25,6 +25,7 @@ function CatVar(dim, valnames, displaynumcat, alpha_order){
 
     //Sort in alphabetical order ... or not ...
     this.alpha_order = alpha_order;
+    this.value_function = value_function;
 }
 
 CatVar.prototype.jsonToList=function(json){
@@ -32,8 +33,9 @@ CatVar.prototype.jsonToList=function(json){
 	//nothing to do
         return [];
     }
+    var that = this;
     var data = json.root.children.map(function(d){
-        return { value: +d.val, addr: +d.path[0]  };
+        return { value: +that.value_function(d.val), addr: +d.path[0]  };
     });
 
     var that = this;
@@ -83,7 +85,7 @@ CatVar.prototype.removeObsolete=function(k){
 };
 
 //Temporal Variable
-function TimeVar(dim,date_offset,start,end,bin_to_hour){
+function TimeVar(dim,date_offset,start,end,bin_to_hour, value_function){
     this.dim = dim;
     this.bin_to_hour = bin_to_hour;
     this.date_offset = date_offset;
@@ -92,6 +94,8 @@ function TimeVar(dim,date_offset,start,end,bin_to_hour){
     this.constraints = {};
     this.constraints[0] = new TemporalConstraint(dim,start,end,bin_to_hour);
     this.constraints[0].dim = dim; //this is ugly
+
+    this.value_function = value_function;
 }
 
 TimeVar.prototype.setBinSize=function(binsize){
@@ -115,7 +119,7 @@ TimeVar.prototype.jsonToList=function(json, bucketsize){
         //Set time in milliseconds from 1970
         startdate.setTime(startdate.getTime()+
                           start*that.bin_to_hour*3600*1000);
-        return {date:startdate, value: +d.val};
+        return {date:startdate, value: +that.value_function(d.val)};
     });
     
     return data.sort(function(a,b) {return a.date-b.date;});

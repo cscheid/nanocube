@@ -71,7 +71,8 @@ Model.prototype.initVars = function(){
 
 	    vref  = new CatVar(v.name,v.valnames,
 			       that.options.config['div'][v.name]['displaynumcat'],
-			       that.options.config['div'][v.name]['alpha_order']);
+			       that.options.config['div'][v.name]['alpha_order'],
+                               that.options.value_function);
 
 	    //init the gui component (move it elsewhere?)
 	    vref.widget = new GroupedBarChart(v.name,
@@ -103,7 +104,8 @@ Model.prototype.initVars = function(){
 
 	    vref  = new TimeVar(v.name, tinfo.date_offset,
 				tinfo.start,tinfo.end,
-				tinfo.bin_to_hour);
+				tinfo.bin_to_hour,
+                                that.options.value_function);
 
 	    var nbins = tinfo.end-tinfo.start+1;
 
@@ -198,7 +200,7 @@ Model.prototype.tileQuery = function(vref,tile,drill,callback){
     }
     else{
 	q.run_query()
-	    .done(function(data){
+	    .done(function(data) {
 		callback(data);
 		that.setCache(qstr,data);
 	    });
@@ -240,11 +242,11 @@ Model.prototype.jsonQuery = function(v){
 	var json = that.getCache(qstr);
 	var color = that.selcolors[k];
 
-	if (json != null){ //cached
+	if (json != null) { // cached
 	    v.update(json,k,color,q);
-	}
-	else{
+	} else {
 	    q.run_query().done(function(json){
+                json.root.children.forEach(that.nanocube.process_values);
 		v.update(json,k,color,q);
 		that.setCache(qstr,json);
 	    });
@@ -281,7 +283,9 @@ Model.prototype.createMap = function(spvar,cm){
 	variable: spvar,
 	noWrap:true,
 	colormap:cm,
-	log: this.options.logcolormap
+	log: this.options.logcolormap,
+        processValues: this.nanocube.process_values,
+        valueFunction: function(v) { return v.count; }
     });
 
     var that = this;
@@ -418,8 +422,9 @@ Model.prototype.drawCreated = function(e,spvar){
 Model.prototype.updatePolygonCount = function(layer, spvar){
     var q = this.totalcount_query(spvar.constraints[layer._leaflet_id]);
     q.run_query().done(function(json){
+        debugger;
 	var countstr ="Count: 0";
-	if (json != null){
+	if (json != null) {
 	    var count = json.root.val;
 	    countstr ="Count: ";
 	    countstr += count.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
@@ -785,16 +790,16 @@ Model.prototype.updateInfo = function(){
     var q = this.totalcount_query();
 
     q.run_query().done(function(json){
-	if (json == null){
+	if (json === null){
 	    return;
 	}
 	//count
 	var count = 0;
 	if (typeof json.root.val != 'undefined'){
-	    count = json.root.val;
+            that.nanocube.process_values(json.root);
+	    count = json.root.val.count;
 	}
 	var countstr = d3.format(",")(count);
-
 
 	//Time
 	var tvarname = Object.keys(that.temporal_vars)[0];
@@ -875,40 +880,6 @@ Model.prototype.updateTimeStep = function(stepsize,window){
 	});
     });
 };
-    /*var that = this;
-    $.getJSON(this.nanocube.getTQuery(), function(json){
-	var addr = json.root.children[0].addr;
-	addr = addr.toString();
-	var start = addr.substring(0,addr.length-8);
-	var end = addr.substring(addr.length-8,addr.length);
-
-	start = parseInt(start,16);
-	end = parseInt(end,16);
-
-	if (isNaN(start)) start=0;
-	if (isNaN(end)) end=0;
-
-	var tvarname = Object.keys(that.temporal_vars)[0];
-	var tvar  = that.temporal_vars[tvarname];
-	var time_const = tvar.constraints[0];
-
-	if (stepsize < 0){ //reset
-	    time_const.start=start;
-	    time_const.nbins=end-start+1;
-	}
-	else{ //advance
-	    time_const.nbins=window;
-	    time_const.start+=stepsize;
-	    if(time_const.start >= end){
-		time_const.start=start;
-	    }
-	}
-
-	time_const.setSelection(0,0);
-	tvar.widget.x.domain([0,1]);
-	that.redraw();
-    });
-};*/
 
 Model.prototype.animate = function(auto,stepsize,window){
     auto = typeof auto !== 'undefined' ? auto : false;

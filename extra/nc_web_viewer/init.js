@@ -39,16 +39,14 @@ function initNanocube(config){
     var nc = new Nanocube({
 	url:config.url,
 	ready: function(nc){
-	    //set options (colormap etc)
-	    var options = {
-		nanocube:nc,
+	    //create the model
+	    var model = new Model({
+		nanocube: nc,
 		config: config,
 		tilesurl:config.tilesurl,
-		heatmapmaxlevel:config.heatmapmaxlevel
-	    };
-
-	    //create the model
-	    var model = new Model(options);
+		heatmapmaxlevel:config.heatmapmaxlevel,
+                value_function: function(v) { return v.count; }
+	    });
 
 	    //set the initial view
 	    for(var sp in config.latlonbox.min){
@@ -56,6 +54,14 @@ function initNanocube(config){
 		    .map.fitBounds([config.latlonbox.min[sp],
 				    config.latlonbox.max[sp]]);
 	    }
-	}
+	},
+        process_values: function(v) {
+            // We're mutating results from the request cache, which is *fine*,
+            // except that we don't want to do it twice.
+            if (v.val.count !== void 0) {
+                return;
+            }
+            v.val = nc_regression.fit(v.val);
+        }
     });
 };

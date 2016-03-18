@@ -12,6 +12,8 @@ L.NanocubeLayer = L.TileLayer.Canvas.extend({
 
 	this.show_count = false;
 	this.log = true;
+        this.process_values = options.processValues;
+        this.value_function = options.valueFunction;
     }
 });
 
@@ -32,6 +34,7 @@ L.NanocubeLayer.prototype.redraw = function(){
 	this._update();
     }
     for (var i in this._tiles) {
+        debugger;
 	this._redrawTile(this._tiles[i]);
     }
     return this;
@@ -70,23 +73,38 @@ L.NanocubeLayer.prototype.drawTile = function(canvas, tilePoint, zoom){
     //query
     var tile = new Tile(tilePoint.x,ty,zoom);
     var that = this;
+    console.log("Min: ", this.min, "Max: ", this.max, "this:", this);
     this.model.tileQuery(this.variable, tile, drill, function(json){
-	//var result = that.processData(data);
 	var result = that.processJSON(json);
-
-	if(result !=null){
-	    that.max = Math.max(that.max, result.max);
-	    that.min = Math.min(that.min, result.min);
-	    that.renderTile(canvas,size,tilePoint,zoom,result.data);
-	}
-	else{
-	    that.renderTile(canvas,size,tilePoint,zoom,null);
-	}
+        if (result === null) {
+            canvas._data = null;
+            return;
+        }
+        if (isNaN(result.max) || isNaN(result.min)) {
+            console.error("Bad min and max for tile");
+            return;
+        }
+        canvas._data = result.data;
+        var old_max = that.max, old_min = that.min;
+	that.max = Math.max(that.max, result.max);
+	that.min = Math.min(that.min, result.min);
+        
+        if ((that.max !== old_max && old_max !== -Infinity) ||
+            (that.min !== old_min && old_min !== Infinity)) {
+            // this requires a rerender of *all* tiles.
+            for (var i in that._tiles) {
+                that.renderTile(that._tiles[i], size, that._tiles[i]._tilePoint,
+                                that._map._zoom);
+            }
+        } else {
+	    that.renderTile(canvas,size,tilePoint,zoom);
+        }
     });
-    this.tileDrawn(canvas);
+    that.tileDrawn(canvas);
 };
 
-L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint,zoom,data){
+L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint,zoom){
+    var data = canvas._data;
     var ctx = canvas.getContext('2d');
 
     if (data == null){
@@ -158,7 +176,7 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint,zoom,dat
     ctx.putImageData(imgBlankData,0,0);
 
     //scale
-    if (sc !=1){
+    if (sc !== 1) {
 	//create a proxy canvas
 	var newCanvas = $('<canvas>')
 		.attr("width", imgData.width)
@@ -166,12 +184,11 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint,zoom,dat
 	newCanvas.getContext("2d").putImageData(imgData, 0, 0);
 
 	ctx.drawImage(newCanvas,0,0,canvas.width,canvas.height);
-    }
-    else{
+    } else {
 	ctx.putImageData(imgData,0,0);
     }
 
-    if (this.show_count){//draw grid box
+    if (this.show_count) { //draw grid box
 	this.drawGridCount(ctx,tilePoint,zoom,data);
     }
 };
@@ -182,8 +199,8 @@ L.NanocubeLayer.prototype.drawGridCount = function(ctx,tilePoint,zoom,data){
     ctx.rect(0,0,ctx.canvas.width,ctx.canvas.height);
     ctx.stroke();
 
-    var totalstr =  "("+tilePoint.x + "," + tilePoint.y +","+zoom+")   ";
-    if(data != null){
+    var totalstr = "("+tilePoint.x + "," + tilePoint.y +","+zoom+")   ";
+    if (data != null) {
 	//Total count
 	var total = data.reduce(function(prev,curr){return prev+curr.v;},0);
 	totalstr +=  total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -191,73 +208,32 @@ L.NanocubeLayer.prototype.drawGridCount = function(ctx,tilePoint,zoom,data){
     ctx.font="10pt sans-serif";
     ctx.fillStyle="white";
     ctx.fillText(totalstr,10,20);
-
 };
 
 
-L.NanocubeLayer.prototype.processJSON = function(json){
-    if (json.root.children == null){
+L.NanocubeLayer.prototype.processJSON = function(json) {
+    var that = this;
+    if (json.root.children === null ||
+        json.root.children.length === 0) {
 	return null;
     }
+    json.root.children.forEach(this.process_values);
 
     var data = json.root.children.map(function(d){
-	if ('path' in d){
-	    return { x: d.path[0], y: d.path[1], v: d.val };
+        var v = that.value_function(d.val);
+	if ('path' in d) {
+	    return { x: d.path[0], y: d.path[1], v: v };
 	} 
 	else{
-	    return { x: d.x, y: d.y, v: d.val };
+	    return { x: d.x, y: d.y, v: v };
 	}
     });
 
-    var minv = data.reduce(function(prev,curr){
-	return Math.min(prev,curr.v) }, Infinity);
-    var maxv = data.reduce(function(prev,curr){
-	return Math.max(prev,curr.v) }, -Infinity);
+    var extent = d3.extent(data, function(item) { return item.v; });
 
-    return {min:minv,max:maxv,data:data};
+    return { min: extent[0], max: extent[1], data: data };
 };
 
-
-L.NanocubeLayer.prototype.processData = function(bindata){
-    if(bindata == null){
-	return null;
-    }
-
-    var record_size = 10;
-    var view = new DataView(bindata);
-    var n_records = bindata.byteLength / record_size;
-    if (n_records < 1) {
-	return null;
-    }
-
-    var data = [];
-    data.length = n_records;
-    var maxv = -Infinity;
-    var minv = Infinity;
-
-    for (var i=0; i<n_records; ++i) {
-	var rx = view.getUint8( record_size*i+1 );
-	var ry = view.getUint8( record_size*i   );
-	var rv = view.getFloat64( record_size*i+2, true );
-	if (rv < 1e-6){ //skip zeros
-	    continue;
-	}
-
-	//if (this.log){
-	//    rv = Math.log(rv+1);
-	//}
-
-	data[i] = {x:rx, y:ry, v: rv};
-	maxv = Math.max(maxv,rv);
-	minv = Math.min(minv,rv);
-    }
-
-    if (maxv == -Infinity && minv == Infinity){ //zeros only
-	return null;
-    }
-
-    return {min:minv,max:maxv,data:data};
-};
 
 
 L.NanocubeLayer.prototype._addTilesFromCenterOut = function (bounds){
