@@ -1,7 +1,10 @@
 function track_extent(accessor)
 {
-    var min, max;
+    var min, max, held = false;
     var result = {
+        hold: function() {
+            
+        },
         reset: function() {
             min = Infinity;
             max = -Infinity;
@@ -37,40 +40,49 @@ function getURLParameter(sParam){
 
 function init(config)
 {
-    var log = false;
+    var log = true;
     var d3_colormap = d3.scale.linear()
-        .domain([0, 0.333, 0.666, 1])
-        .range(["red", "red", "yellow", "white"]);
+            .range([d3.hcl(-160, 40, 50),
+                    d3.hcl(0, 0, 50),
+                    d3.hcl(20, 40, 50)]);
     var opacityMap = d3.scale.linear()
-            .domain([0, 0.333])
-            .range([0, 1])
+            .range([0, 1, 1])
             .clamp(true);
     
     function count(v) { return v.count; }
+    function slope(v) { return v.parameters[0]; }
 
     var count_extent_tracker = track_extent(count);
+    var slope_extent_tracker = track_extent(slope);
     
     function colormap(v) {
-        v = v.count;
-        var vmin = count_extent_tracker.extent()[0], vmax = count_extent_tracker.extent()[1];
+        var s = slope(v), c = count(v);
+        var smin = slope_extent_tracker.extent()[0], smax = slope_extent_tracker.extent()[1];
+        var cmin = count_extent_tracker.extent()[0], cmax = count_extent_tracker.extent()[1];
+        
+        var absmax = Math.max(Math.abs(smin), Math.abs(smax));
+        d3_colormap.domain([-absmax, 0, absmax]);
+
         if (log) {
-            vmin = Math.log(vmin + 1);
-            vmax = Math.log(vmax + 1);
-            v = Math.log(v + 1);
+            cmin = Math.log(cmin + 1);
+            cmax = Math.log(cmax + 1);
+            c = Math.log(c + 1);
         }
-        var normalized_v = (v - vmin) / (vmax - vmin);
-        var t = d3.rgb(d3_colormap(normalized_v));
-        return { r: +t.r, g: +t.g, b: +t.b, a: opacityMap(normalized_v)*255 };
+        opacityMap.domain([cmin, cmin * 2/3 + cmax * 1/3, cmax]);
+        var t = d3.rgb(d3_colormap(s));
+        return { r: +t.r, g: +t.g, b: +t.b, a: opacityMap(c)*255 };
     }
 
     var modelOptions = {
         coarseLevels: 1,
         mapOptions: {
             resetBounds: function() {
-                return count_extent_tracker.reset();
+                count_extent_tracker.reset();
+                return slope_extent_tracker.reset();
             },
             updateBounds: function(data) {
-                return count_extent_tracker.update(data);
+                return count_extent_tracker.update(data) ||
+                    slope_extent_tracker.update(data);
             }, on: function(event) {
                 switch (event) {
                 case "toggleLog":
