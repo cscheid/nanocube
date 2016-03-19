@@ -3,24 +3,17 @@ L.NanocubeLayer = L.TileLayer.Canvas.extend({
 	L.TileLayer.Canvas.prototype.initialize.call(this, options);
 	this.model = options.model;
 	this.variable = options.variable;
-	this.colormap = d3.scale.linear()
-	    .domain(options.colormap.domain)
-	    .range(options.colormap.colors);
-
-	this.coarselevels = 1;
+	this.coarselevels = options.coarseLevels;
 	this.smooth = false;
-
+        this.mapOptions = _.defaults(options.mapOptions, {
+            resetBounds: _.identity,
+            updateBounds: _.identity,
+            on: _.identity
+        });
 	this.show_count = false;
-	this.log = true;
         this.process_values = options.processValues;
-        this.value_function = options.valueFunction;
     }
 });
-
-L.NanocubeLayer.prototype.toggleLog = function(){
-    this.log = !this.log;
-    this.redraw();
-};
 
 L.NanocubeLayer.prototype.toggleShowCount = function(){
     this.show_count = !this.show_count;
@@ -34,7 +27,6 @@ L.NanocubeLayer.prototype.redraw = function(){
 	this._update();
     }
     for (var i in this._tiles) {
-        debugger;
 	this._redrawTile(this._tiles[i]);
     }
     return this;
@@ -73,25 +65,15 @@ L.NanocubeLayer.prototype.drawTile = function(canvas, tilePoint, zoom){
     //query
     var tile = new Tile(tilePoint.x,ty,zoom);
     var that = this;
-    console.log("Min: ", this.min, "Max: ", this.max, "this:", this);
+
     this.model.tileQuery(this.variable, tile, drill, function(json){
-	var result = that.processJSON(json);
-        if (result === null) {
+	var data = that.processJSON(json);
+        if (data === null) {
             canvas._data = null;
             return;
         }
-        if (isNaN(result.max) || isNaN(result.min)) {
-            console.error("Bad min and max for tile");
-            return;
-        }
-        canvas._data = result.data;
-        var old_max = that.max, old_min = that.min;
-	that.max = Math.max(that.max, result.max);
-	that.min = Math.min(that.min, result.min);
-        
-        if ((that.max !== old_max && old_max !== -Infinity) ||
-            (that.min !== old_min && old_min !== Infinity)) {
-            // this requires a rerender of *all* tiles.
+        canvas._data = data;
+        if (that.mapOptions.updateBounds(data)) {
             for (var i in that._tiles) {
                 that.renderTile(that._tiles[i], size, that._tiles[i]._tilePoint,
                                 that._map._zoom);
@@ -130,40 +112,15 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint,zoom){
 
     //set color
     var that = this;
-    var minv = that.min;
-    var maxv = that.max;
-    if (that.log){
-	minv = Math.log(minv+1);
-	maxv = Math.log(maxv+1);
-    }
-    minv*=0.9;
 
     data.forEach(function(d){
-	if(d.v < 1e-6){
-	    return;
-	}
-
-	var v = d.v;
-	if (that.log){
-	    v = Math.log(v+1);
-	}
-
-	v = (v-minv)/(maxv-minv);
-
-	//try to parse rgba
-	var color = that.colormap(v);
-	var m = color.match(/rgba\((.+),(.+),(.+),(.+)\)/);
-	if(m){
-	    color = {r:+m[1],g:+m[2],b:+m[3],a:+m[4]*255};
-	}
-	else{
-	    color = d3.rgb(that.colormap(v));
-	    color.a = 2*255*v;
-	}
+	var color = that.mapOptions.colormap(d.v);
+        if (!color)
+            return;
 
 	var idx = (imgData.height-1-d.y)*imgData.width + d.x;
 	pixels[idx*4]=color.r;
-	pixels[idx*4+1]=color.g ;
+	pixels[idx*4+1]=color.g;
 	pixels[idx*4+2]=color.b;
 	pixels[idx*4+3]=color.a;
     });
@@ -213,6 +170,13 @@ L.NanocubeLayer.prototype.drawGridCount = function(ctx,tilePoint,zoom,data){
 
 L.NanocubeLayer.prototype.processJSON = function(json) {
     var that = this;
+    try {
+        if (json.root.children.length === 0) {
+            return null;
+        }
+    } catch (e) {
+        return null;
+    }
     if (json.root.children === null ||
         json.root.children.length === 0) {
 	return null;
@@ -220,24 +184,20 @@ L.NanocubeLayer.prototype.processJSON = function(json) {
     json.root.children.forEach(this.process_values);
 
     var data = json.root.children.map(function(d){
-        var v = that.value_function(d.val);
-	if ('path' in d) {
-	    return { x: d.path[0], y: d.path[1], v: v };
-	} 
-	else{
-	    return { x: d.x, y: d.y, v: v };
-	}
+        var v = d.val;
+        if ('path' in d) {
+            return { x: d.path[0], y: d.path[1], v: v };
+        } 
+        else{
+            return { x: d.x, y: d.y, v: v };
+        }
     });
-
-    var extent = d3.extent(data, function(item) { return item.v; });
-
-    return { min: extent[0], max: extent[1], data: data };
+    return data;
 };
 
 
 
-L.NanocubeLayer.prototype._addTilesFromCenterOut = function (bounds){
-    this.max = -Infinity;
-    this.min = Infinity;
+L.NanocubeLayer.prototype._addTilesFromCenterOut = function (bounds) {
+    this.mapOptions.resetBounds();
     L.TileLayer.Canvas.prototype._addTilesFromCenterOut.call(this, bounds);
 };

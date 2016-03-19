@@ -160,7 +160,6 @@ function Nanocube(opts) {
     this.url        = opts.url;
     this.schema     = null;
     this.dimensions = null;
-    this.process_values = opts.process_values;
 
     var that = this;
 

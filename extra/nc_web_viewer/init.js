@@ -21,7 +21,7 @@ function initPage(config){
 	config.css.forEach(function(d){
 	    s.insertRule(d,s.cssRules.length);
 	});
-    }    
+    }
     
     $(window).on("resize load orientationchange", function(){
 	contents.forEach(function(div){
@@ -34,34 +34,29 @@ function initPage(config){
     $(window).resize(); //force resize on the first call
 }
 
-
-function initNanocube(config){
+function initNanocube(config, modelOptions) {
     var nc = new Nanocube({
 	url:config.url,
 	ready: function(nc){
 	    //create the model
-	    var model = new Model({
+	    var model = new Model(_.defaults(modelOptions, {
 		nanocube: nc,
 		config: config,
-		tilesurl:config.tilesurl,
-		heatmapmaxlevel:config.heatmapmaxlevel,
-                value_function: function(v) { return v.count; }
-	    });
-
+		tilesurl: config.tilesurl,
+		heatmapmaxlevel: config.heatmapmaxlevel
+            }));
 	    //set the initial view
 	    for(var sp in config.latlonbox.min){
 		model.spatial_vars[sp]
 		    .map.fitBounds([config.latlonbox.min[sp],
 				    config.latlonbox.max[sp]]);
 	    }
-	},
-        process_values: function(v) {
-            // We're mutating results from the request cache, which is *fine*,
-            // except that we don't want to do it twice.
-            if (v.val.count !== void 0) {
-                return;
-            }
-            v.val = nc_regression.fit(v.val);
-        }
+	}
     });
 };
+
+//////////////////////////////////////////////////////////////////////////////
+
+$(function(){
+    main();
+});

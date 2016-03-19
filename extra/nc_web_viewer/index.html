@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <!-- fonts --!>
+    <!-- fonts -->
     <link href='http://fonts.googleapis.com/css?family=Open+Sans:300'
 	  rel='stylesheet' type='text/css'>
     <meta http-equiv="Pragma" content="no-cache"> 
@@ -18,16 +18,15 @@
     <!-- jQuery, Leaflet, Underscore includes -->
     <script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>
     <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
-    
     <script src="http://d3js.org/d3.v3.js" charset="utf-8"></script>
-    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet-src.js"></script>
     <script src="lib/leaflet.draw/leaflet.draw-src.js"></script>
     <script src="lib/colorbrewer.js"></script>
     
     <!-- Custom includes -->
     <script src="regression.js"></script>
-    <script src="nanocube3.js"></script>
+    <script src="nanocube.js"></script>
     <script src="TileLatLngUtils.js"></script>
     
     <script src="NanocubeLayer.js"></script>
@@ -37,33 +36,9 @@
     <script src="QueryConstraint.js"></script>
     <script src="Variables.js"></script>
     <script src="Model.js"></script>
-    
     <script src="init.js"></script>
-    
-    <!-- Main -->
-    <script>
-      //main
-     function getURLParameter(sParam){
-         var sPageURL = window.location.search.substring(1);
-         var sURLVariables = sPageURL.split('&');
-         for (var i = 0; i < sURLVariables.length; i++){
-             var sParameterName = sURLVariables[i].split('=');
-             if (sParameterName[0] == sParam){
-	         return sParameterName[1];
-             }
-         }
-     }
 
-     $(function(){
-       var conf = getURLParameter('config') ||
-          window.location.hash.substring(1) || 'config';
-              
-       $.getJSON(conf+".json", function(config){
-         initPage(config);
-         initNanocube(config);
-       }).fail(function(){throw new Error("Fail to get or parse "+conf);});
-     });
-    </script>
+    <script src="main.js"></script>
   </head>
   
   <body>
@@ -139,7 +114,7 @@
                           data-role="slider"
                           data-mini="true"> 
                     <option value="off">Off</option>
-                    <option value="on" selected>On</option>
+                    <option value="on">On</option>
                   </select>
                 </div>
               </li>
