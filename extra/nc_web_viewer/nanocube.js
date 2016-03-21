@@ -151,6 +151,13 @@ Query.prototype.run_query = function(callback) {
     return $.getJSON(query_string);
 };
 
+Query.prototype.copy = function() {
+    var result = new Query(this.nanocube);
+    result.dimension      = this.dimension;
+    result.drilldown_flag = this.drilldown_flag;
+    result.query_elements = _.clone(this.query_elements);
+    return result;
+};
 
 //-----------------------------------------------------------------------
 // Nanocube

@@ -7,8 +7,7 @@ L.NanocubeLayer = L.TileLayer.Canvas.extend({
 	this.smooth = false;
         this.mapOptions = _.defaults(options.mapOptions, {
             resetBounds: _.identity,
-            updateBounds: _.identity,
-            on: _.identity
+            updateBounds: _.identity
         });
 	this.show_count = false;
         this.process_values = options.processValues;
@@ -19,7 +18,6 @@ L.NanocubeLayer.prototype.toggleShowCount = function(){
     this.show_count = !this.show_count;
     this.redraw();
 };
-
 
 L.NanocubeLayer.prototype.redraw = function(){
     if (this._map) {
@@ -86,6 +84,7 @@ L.NanocubeLayer.prototype.drawTile = function(canvas, tilePoint, zoom){
 };
 
 L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint,zoom){
+    // d3.select(canvas).classed("heatmap", true);
     var data = canvas._data;
     var ctx = canvas.getContext('2d');
 

@@ -1,23 +1,28 @@
 function track_extent(accessor)
 {
     var min, max, held = false;
+    var all_data = [];
     var result = {
         hold: function() {
-            
         },
         reset: function() {
             min = Infinity;
             max = -Infinity;
+            all_data = [];
         }, update: function(d) {
             var old_max = max;
             var old_min = min;
-            var new_extent = d3.extent(d, function(d) { return accessor(d.v); });
-            var new_min = new_extent[0], new_max = new_extent[1];
+            all_data.push.apply(all_data, d.map(function(d) { return accessor(d.v); }));
+            all_data.sort();
+            // var new_extent = d3.extent(d, function(d) { return accessor(d.v); });
+
+            var new_min = all_data[~~(all_data.length/20)],
+                new_max = all_data[~~(19*all_data.length/20)];
             min = Math.min(new_min, old_min);
             max = Math.max(new_max, old_max);
+            console.log(min, max);
             return ((new_max !== old_max && old_max !== -Infinity) ||
                     (new_min !== old_min && old_min !== Infinity));
-            
         }, extent: function() {
             return [min, max];
         }
@@ -41,10 +46,10 @@ function getURLParameter(sParam){
 function init(config)
 {
     var log = true;
+    var colors = colorbrewer.Spectral[9].slice().reverse();
     var d3_colormap = d3.scale.linear()
-            .range([d3.hcl(-160, 40, 50),
-                    d3.hcl(0, 0, 50),
-                    d3.hcl(20, 40, 50)]);
+            .range(colors)
+            .clamp(true);
     var opacityMap = d3.scale.linear()
             .range([0, 1, 1])
             .clamp(true);
@@ -57,11 +62,7 @@ function init(config)
     
     function colormap(v) {
         var s = slope(v), c = count(v);
-        var smin = slope_extent_tracker.extent()[0], smax = slope_extent_tracker.extent()[1];
         var cmin = count_extent_tracker.extent()[0], cmax = count_extent_tracker.extent()[1];
-        
-        var absmax = Math.max(Math.abs(smin), Math.abs(smax));
-        d3_colormap.domain([-absmax, 0, absmax]);
 
         if (log) {
             cmin = Math.log(cmin + 1);
@@ -73,6 +74,15 @@ function init(config)
         return { r: +t.r, g: +t.g, b: +t.b, a: opacityMap(c)*255 };
     }
 
+    function processValues(v) {
+        // We're mutating results from the request cache, which is *fine*,
+        // except that we don't want to do it more than once.
+        if (v.val.count !== void 0) {
+            return;
+        }
+        v.val = nc_regression.fit(v.val);
+    };
+    
     var modelOptions = {
         coarseLevels: 1,
         mapOptions: {
@@ -81,39 +91,150 @@ function init(config)
                 return slope_extent_tracker.reset();
             },
             updateBounds: function(data) {
-                return count_extent_tracker.update(data) ||
-                    slope_extent_tracker.update(data);
-            }, on: function(event) {
-                switch (event) {
-                case "toggleLog":
-                    log = !log;
-                    break;
+                var changedCount = count_extent_tracker.update(data),
+                    changedSlope = slope_extent_tracker.update(data);
+                if (changedSlope) {
+                    var smin = slope_extent_tracker.extent()[0], smax = slope_extent_tracker.extent()[1];
+                    var absmax = Math.max(Math.abs(smin), Math.abs(smax));
+                    d3_colormap.domain([-absmax, -absmax*0.75, -absmax * 0.5, -absmax * 0.25,
+                                        0,
+                                        absmax * 0.25, absmax * 0.5, absmax * 0.75,
+                                        absmax]);
+                    console.log(d3_colormap.domain(), absmax);
+                    leg.redraw();
                 }
+                return changedSlope || changedCount;
             }, colormap: colormap
             , selColor: d3.rgb(255, 128, 0)
         },
         valueFunction: function(v) {
             return v.count;
         },
-        processValues: function(v) {
-            // We're mutating results from the request cache, which is *fine*,
-            // except that we don't want to do it more than once.
-            if (v.val.count !== void 0) {
-                return;
-            }
-            v.val = nc_regression.fit(v.val);
-        },
+        processValues: processValues,
         countFunction: count
     };
 
+    var model;
+    var sp_view, geomap, heatmap;
+    
     initPage(config);
-    initNanocube(config, modelOptions);
+    initNanocube(config, modelOptions, function(model_) {
+        model = model_;
+        sp_view = spatial_view({
+            divId: "location",
+            variable: model.spatial_vars.location,
+            config: config,
+            model: model,
+            processValues: modelOptions.processValues,
+            nanocubeLayer: {
+                coarseLevels: 4,
+                opacity: 1.0,
+                model: model,
+                mapOptions: modelOptions.mapOptions
+            }
+        });
+        geomap = sp_view.geoMap;
+        heatmap = sp_view.nanocubeLayer;
+        model.on("resultsChanged", function() {
+            ui.update();
+        });
+    });
+
+    //////////////////////////////////////////////////////////////////////////
+    // UI
+
+    function increaseRadius() { sp_view.radius(sp_view.radius() + 1); };
+    function decreaseRadius() { sp_view.radius(sp_view.radius() - 1); };
+    function increaseGeoOpacity() { sp_view.geoOpacity(sp_view.geoOpacity() + 0.1); }
+    function decreaseGeoOpacity() { sp_view.geoOpacity(sp_view.geoOpacity() - 0.1); }
+    function increaseHeatmapOpacity() { sp_view.heatMapOpacity(sp_view.heatMapOpacity() + 0.1); }
+    function decreaseHeatmapOpacity() { sp_view.heatMapOpacity(sp_view.heatMapOpacity() - 0.1); }
+
+    function df(v) {
+        var df = d3.time.format("%Y-%m-%d %H:%M");
+        try {
+            return df(v);
+        } catch(e) { return "-"; }
+    }
+    
+    ui.add(function() {
+        var totalCount = (model && model.totalCount()) || {
+            startDate: "-",
+            endDate: "-",
+            total: "-"
+        };
+        return ui.group(
+            ui.div({ id: "total" },
+                   ui.text(df(totalCount.startDate)),
+                   ui.text(" - "),
+                   ui.text(df(totalCount.endDate)),
+                   ui.text(" Total: "),
+                   ui.text(totalCount.total)),
+            React.createElement("div", null, ui.checkBox({
+                change: function(state) {
+                    log = state;
+                    console.log("heatmap redraw");
+                    heatmap.redraw();
+                }, label: "Log-scale colormap",
+                checked: log
+            })),
+            React.createElement("div", null, ui.checkBox({
+                change: function(evt) {
+                    heatmap.toggleShowCount();
+                }, label: "Show heatmap grid"
+            })),
+            ui.incDecButtons({
+                increase: increaseGeoOpacity,
+                decrease: decreaseGeoOpacity,
+                label: "Geo map opacity"
+            }),
+            ui.incDecButtons({
+                increase: decreaseRadius,
+                decrease: increaseRadius,
+                label: "Heatmap resolution"
+            }),
+            ui.incDecButtons({
+                increase: increaseHeatmapOpacity,
+                decrease: decreaseHeatmapOpacity,
+                label: "Heatmap opacity"
+            }));
+    }, document.getElementById('react-ui-main'));
+
+    d3.select("#location")
+        .on("keypress", ui.key({
+            // Coarsening
+            ",": increaseRadius,
+            ".": decreaseRadius,
+            // Opacities
+            "<": decreaseHeatmapOpacity,
+            ">": increaseHeatmapOpacity,
+            "d": decreaseGeoOpacity,
+            "b": increaseGeoOpacity,
+            // other
+            "g": function() { heatmap.toggleShowCount(); },
+            "l": function() {
+                log = !log;
+                heatmap.redraw();
+                ui.update();
+            }
+        }));
+
+    var leg = new ColorLegend({
+        element: d3.select("body")
+            .append("div")
+            .attr("style", "position: fixed; top: 1em; left: 5em"),
+        scale: d3_colormap
+    });
+
+    
+        
 }
 
 function main() {
-    var conf = getURLParameter('config') ||
-            window.location.hash.substring(1) || 'config';
-    
-    $.getJSON(conf+".json", init)
-        .fail(function(){throw new Error("Fail to get or parse "+conf);});
+    d3.json("config_flights.json", function(error, data) {
+        if (error) {
+            throw new Error("Fail to get or parse config_flights.");
+        }
+        init(data);
+    });
 }

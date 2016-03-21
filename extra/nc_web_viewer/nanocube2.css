@@ -1,13 +1,11 @@
-* {
-    font-family: 'Open Sans','sans-serif';
-    font-size: 10pt;
-}
-
 html,body,.ui-content,#nc-container,#maincontent{
+    font-family: "Oxygen", Helvetica Neue, Helvetica, Arial, sans-serif;
+    font-size: 10pt;
     height: 100%;
     width: 100%;
     margin: 0px;
     padding: 0px;
+    line-height: 1.25;
 }
 
 legend,#flip-grid-label,#flip-log-label, #flip-refresh-label{
@@ -41,36 +39,55 @@ text {
     shape-rendering: crispEdges;
 }
 
-/*Panel button placement*/
-#panelbtn .ui-btn-icon-notext.ui-corner-all{
-    position: absolute;
-    top: 50%;
-    left: 0px;
-    z-index: 1;
-    -webkit-border-radius: 0em 0.5em 0.5em 0em;
-    border-radius: 0em 0.5em 0.5em 0em;
+img.leaflet-tile {
+    -webkit-filter: saturate(20%) invert(100%);
 }
 
-/* Adjust the width of the left reveal menu. */
-#pageone #ctrlpanel.ui-panel {
-    opacity: 1.0;
-    width: 24em;
+#total {
+    position: fixed;
+    top: 1em;
+    right: 1em;
+    color: rgba(255,255,255,0.9);
+    background-color: rgba(0,0,0,0.5);
+    padding: .25em;
 }
 
-#pageone #ctrlpanel.ui-panel-closed {
-    width: 0;
+#react-ui-main {
+    background-color: rgba(0,0,0,0.5);
 }
 
-#pageone .ui-panel-page-content-position-left,
-.ui-panel-dismiss-open.ui-panel-dismiss-position-left {
-    left: 24em;
-    right: -24em;
+div.ui {
+    color: rgba(255,255,255,0.9);
+    padding: 3px;
 }
 
-#pageone .ui-panel-animate.ui-panel-page-content-position-left.ui-panel-page-content-display-reveal {
-    left: 0;
-    right: 0;
-    -webkit-transform: translate3d(24em,0,0);
-    -moz-transform: translate3d(24em,0,0);
-    transform: translate3d(24em,0,0);
+g.color-legend text {
+    fill: white;
 }
+
+g.color-legend path.domain {
+    fill: none;
+    stroke: white;
+}
+
+/* add class="paper" to the html element to render it for printing purposes.
+ ******************************************************************************/
+
+html.paper g.color-legend path.domain {
+    fill: none;
+    stroke: black;
+}
+
+html.paper img.leaflet-tile {
+    -webkit-filter: saturate(30%);
+}
+
+html.paper g.color-legend path.domain {
+    fill: none;
+    stroke: black;
+}
+
+html.paper g.color-legend text {
+    fill: black;
+}
+

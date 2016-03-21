@@ -1,8 +1,10 @@
+/*global _ */
 var MAXCACHE=150;
 var hourbSizes = [1,12,24,7*24];
 var colors = colorbrewer.Set1[9];
 
 function Model(opt){
+    this.listeners = {};
     this.nanocube = opt.nanocube;
     this.options = _.defaults(opt, {
         processValues: {},
@@ -19,6 +21,8 @@ function Model(opt){
 
     //initialize the variables
     this.initVars();
+
+    this._totalCount = {};
 
     this.cache_off = false;
 };
@@ -45,6 +49,7 @@ Model.prototype.initVars = function(){
             }
             
             vref  = new SpatialVar(v.name);
+            that.spatial_vars[v.name] = vref;
 
             vref.maxlevel = +t[2];
             if (that.options.heatmapmaxlevel != undefined){
@@ -53,15 +58,13 @@ Model.prototype.initVars = function(){
             }
 
             //Create the map and heatmap
-            var ret = that.createMap(vref);
-            vref.map=ret.map;
-            vref.heatmap=ret.heatmap;
-            if(that.options.smooth != undefined){
-                vref.heatmap.smooth = that.options.smooth;
-            }
-
+            // var ret = that.createMap(vref);
+            // vref.map=ret.map;
+            // vref.heatmap=ret.heatmap;
+            // if(that.options.smooth != undefined){
+            //     vref.heatmap.smooth = that.options.smooth;
+            // }
             that.selcolors[v.name] = that.options.mapOptions.selColor;
-            that.spatial_vars[v.name] = vref;
             break;
 
         case 'cat': //Create a categorical var and barchart
@@ -90,6 +93,7 @@ Model.prototype.initVars = function(){
                 }
                 that.redraw();
             });
+            that.jsonQuery(vref);
 
             that.cat_vars[v.name] = vref;
             break;
@@ -115,6 +119,7 @@ Model.prototype.initVars = function(){
                 vref.constraints[0].setSelection(start,end,vref.date_offset);
                 that.redraw(vref);
             };
+            that.jsonQuery(vref);
 
             vref.widget.update_display_callback=function(start,end){
                 vref.constraints[0].setRange(start,end,vref.date_offset);
@@ -133,62 +138,59 @@ Model.prototype.initVars = function(){
             break;
         }
     });
+    that.updateInfo();
 };
 
 //Redraw
-Model.prototype.redraw = function(calling_var,sp){
+Model.prototype.redraw = function(calling_var,sp) {
     var that = this;
     var spatial = true;
     if (sp != undefined){
         spatial = sp;
     }
 
-    //spatial
-    Object.keys(that.spatial_vars).forEach(function(v){
-        if(calling_var != that.spatial_vars[v] && spatial){
-            that.spatial_vars[v].update();
-            that.updateInfo();
-        }
-    });
-
-    //update each spatial polygon constraints
-    Object.keys(that.spatial_vars).forEach(function(v){
-        var spvar = that.spatial_vars[v];
-    });
-
     //temporal
-    Object.keys(that.temporal_vars).forEach(function(v){
-        var thisvref = that.temporal_vars[v];
+    _.each(that.temporal_vars, function(thisvref, v) {
         if(calling_var != thisvref){ that.jsonQuery(thisvref); }
     });
 
     //categorical
-    Object.keys(that.cat_vars).forEach(function(v){
-        var thisvref = that.cat_vars[v];
+    _.each(that.cat_vars, function(thisvref, v) {
         if(calling_var != thisvref){ that.jsonQuery(thisvref); }
     });
+
+    this.updateInfo();
+    this._queryChanged();
+};
+
+Model.prototype._resultsChanged = function()
+{
+    _.each(this.listeners["resultsChanged"], function(f) { f(); });
+};
+
+Model.prototype._queryChanged = function()
+{
+    _.each(this.listeners["queryChanged"], function(f) { f(); });
 };
 
 //Tile queries for Spatial Variables
 Model.prototype.tileQuery = function(vref,tile,drill,callback){
     var q = this.nanocube.query();
     var that = this;
-    Object.keys(that.temporal_vars).forEach(function(v){
-        q = that.temporal_vars[v].constraints[0].add(q);
+    _.each(that.temporal_vars, function(temporal_var, v) {
+        q = temporal_var.constraints[0].add(q);
     });
 
-    Object.keys(that.cat_vars).forEach(function(v){
-        q = that.cat_vars[v].constraints[0].add(q);
+    _.each(that.cat_vars, function(cat_var, v) {
+        q = cat_var.constraints[0].add(q);
     });
 
-    Object.keys(that.spatial_vars).forEach(function(v){
-        var spvref = that.spatial_vars[v];
-        if(vref != spvref){
-            q = spvref.view_const.add(q);
-        }
-    });
-
-    //q = q.drilldown().dim(vref.dim).findAndDive(tile.raw(),drill);
+    // Object.keys(that.spatial_vars).forEach(function(v){
+    //     var spvref = that.spatial_vars[v];
+    //     if(vref != spvref){
+    //         q = spvref.view_const.add(q);
+    //     }
+    // });
 
     q = q.drilldown().dim(vref.dim).findTile(tile,drill);
 
@@ -233,11 +235,9 @@ Model.prototype.getCache = function(qstr){
 //JSON Queries for Cat and Time Variables
 Model.prototype.jsonQuery = function(v){
     var queries = this.queries(v);
-    var that =this;
-    var keys = Object.keys(queries);
-
-    keys.forEach(function(k){
-        var q = queries[k];
+    var that = this;
+    
+    _.each(queries, function(q, k) {
         var qstr = q.toString('count');
         var json = that.getCache(qstr);
         var color = that.selcolors[k];
@@ -257,62 +257,12 @@ Model.prototype.jsonQuery = function(v){
 //Remove unused constraints from variables
 Model.prototype.removeObsolete= function(k){
     var that = this;
-    Object.keys(that.temporal_vars).forEach(function(v){
-        that.temporal_vars[v].removeObsolete(k);
+    _.each(that.temporal_vars, function(temporal_var, v) {
+        temporal_var.removeObsolete(k);
     });
-
-    Object.keys(that.cat_vars).forEach(function(v){
-        that.cat_vars[v].removeObsolete(k);
+    _.each(that.cat_vars, function(cat_var, v) {
+        cat_var.removeObsolete(k);
     });
-};
-
-
-//Setup maps
-Model.prototype.createMap = function(spvar){
-    var map=L.map(spvar.dim,{
-        maxZoom: Math.min(18,spvar.maxlevel+1)
-    });
-
-    var maptile = L.tileLayer(this.options.tilesurl,{
-        noWrap:true,
-        opacity:0.4 });
-
-    var heatmap = new L.NanocubeLayer({
-        opacity: 0.6,
-        model: this,
-        variable: spvar,
-        noWrap:true,
-        mapOptions: this.options.mapOptions,
-        processValues: this.options.processValues,
-        coarseLevels: this.options.coarseLevels
-    });
-
-    var that = this;
-    map.on('moveend', function(e){
-        var b = map.getBounds();
-        var level = map.getZoom();
-        var tilelist = boundsToTileList(b,Math.min(level+8, spvar.maxlevel));
-
-        spvar.setCurrentView(tilelist);
-        that.redraw(spvar);
-        that.updateInfo();
-    });
-
-    maptile.addTo(map);
-    heatmap.addTo(map);
-
-    //register panel functions
-    this.panelFuncs(maptile,heatmap);
-
-
-    //register keyboard shortcuts
-    this.keyboardShortcuts(spvar,map,heatmap);
-
-
-    //Drawing Rect and Polygons
-    this.addDraw(map,spvar,false);
-
-    return {map:map, heatmap:heatmap};
 };
 
 //Colors
@@ -331,7 +281,6 @@ Model.prototype.addDraw = function(map,spvar){
     map.editControl = new L.Control.Draw({
         draw: {
             rectangle: true,
-            //polygon: false,
             polyline: false,
             circle: false,
             marker: false,
@@ -354,9 +303,6 @@ Model.prototype.addDraw = function(map,spvar){
     var that = this;
     map.on('draw:created', function (e) {
         that.drawCreated(e,spvar);
-        if (spvar.dim in spvar.constraints){
-            that.toggleGlobal(spvar); //auto disable global
-        }
     });
 
     map.on('draw:deleted', function (e) {
@@ -482,58 +428,6 @@ Model.prototype.panelFuncs = function(maptiles,heatmap){
     //panel btns
     var that = this;
 
-    $("#heatmap-rad-btn-dec").on('click', function(){
-        heatmap.coarselevels = Math.max(heatmap.coarselevels-1,0);
-        return heatmap.redraw();
-    });
-
-    $("#heatmap-rad-btn-inc").on('click', function(){
-        heatmap.coarselevels = Math.min(heatmap.coarselevels+1,8);
-        return heatmap.redraw();
-    });
-
-    $("#heatmap-op-btn-dec").on('click', function(){
-        var heatmapop = heatmap.options.opacity;
-        heatmapop = Math.max(heatmapop-0.1, 1e-3);
-        return heatmap.setOpacity(heatmapop);
-    });
-
-    $("#heatmap-op-btn-inc").on('click', function(){
-        var heatmapop = heatmap.options.opacity;
-        heatmapop = Math.min(heatmapop+0.1, 1.0);
-        return heatmap.setOpacity(heatmapop);
-    });
-
-    $("#map-op-btn-dec").on('click', function(){
-        var mapop = maptiles.options.opacity;
-        mapop = Math.max(mapop-0.1, 1e-3);
-        return maptiles.setOpacity(mapop);
-    });
-
-    $("#map-op-btn-inc").on('click', function(){
-        var mapop = maptiles.options.opacity;
-        mapop = Math.min(mapop+0.1, 1.0);
-        return maptiles.setOpacity(mapop);
-    });
-
-    $("#flip-grid").on('change', function(){
-        return heatmap.toggleShowCount(); //refresh
-    });
-
-    $("#flip-log").on('change', function(){
-        heatmap.mapOptions.on("toggleLog");
-        heatmap.redraw();
-    });
-
-    $("#flip-refresh").on('change', function(){
-        if (this.value == "on"){
-            that.animate(true,1,10);
-        }
-        else{
-            that.animate(false);
-        }
-    });
-
     $("#tbinsize-btn-dec").on('click', function(){
         var k = Object.keys(that.temporal_vars);
         var tvar = that.temporal_vars[k[0]];
@@ -553,166 +447,6 @@ Model.prototype.panelFuncs = function(maptiles,heatmap){
         that.setTimeBinSize(hr, tvar); //shift forward
         return that.redraw(); //refresh
     });
-
-    $("#export-btn").on('click', function(){
-        function latlonBoundry(b){
-            return b.map(function(tile){
-                return tile_to_degree(tile, tile.level, true);
-            });
-        }
-
-        var export_obj = {};
-        //Export spatial constraints
-        export_obj.spatial = {};
-        for (var s in that.spatial_vars){
-            export_obj.spatial[s] = {};
-            export_obj.spatial[s].view_const=
-                latlonBoundry(that.spatial_vars[s].view_const.boundary);
-            for (var c in that.spatial_vars[s].constraints){
-                var cons = that.spatial_vars[s].constraints[c];
-                if (cons != that.spatial_vars[s].view_const){
-                    export_obj.spatial[s][c] = latlonBoundry(cons.boundary);
-                }
-            }
-        }
-        
-        //Export cat constraints
-        export_obj.cat = {};
-        for (var cat in that.cat_vars){
-            export_obj.cat[cat] = {};
-            for (c in that.cat_vars[cat].constraints){
-                cons = that.cat_vars[cat].constraints[c];
-                if (cons.selection.length > 0 ){
-                    export_obj.cat[cat][c] =
-                        cons.selection.map(function(d){
-                            return that.cat_vars[cat].addrkey[d];
-                        });
-                }
-            }
-        }
-        
-        //Export temporal constraints
-        export_obj.temporal = {};
-        for (var t in that.temporal_vars){
-            export_obj.temporal[t] = {};
-            for (c in that.temporal_vars[t].constraints){
-                var b2h = that.temporal_vars[t].bin_to_hour;
-                cons = that.temporal_vars[t].constraints[c];
-                if (cons.selection_start != cons.start ||
-                    cons.selected_bins != cons.nbins ){
-                        var offset = that.temporal_vars[t].date_offset;
-                        var start = new Date(offset);
-                        start.setSeconds(start.getSeconds()
-                                         + cons.selection_start *
-                                         b2h * 3600);
-                        var end = new Date(start);
-                        end.setSeconds(end.getSeconds()
-                                       + cons.selected_bins *
-                                       b2h * 3600),
-                        
-                        export_obj.temporal[t][c] ={
-                            start:start,
-                            end: end
-                        };
-                    }
-            }
-        }
-        //Save the file
-        this.href ='data:application/json,'+JSON.stringify(export_obj);
-    });
-};
-
-
-//Keyboard
-Model.prototype.keyboardShortcuts = function(spvar,map){
-    var maptiles, heatmap;
-    //get the maptiles and heatmap
-    Object.keys(map._layers).forEach(function(k){
-        if (map._layers[k] instanceof L.NanocubeLayer){
-            heatmap = map._layers[k];
-        }
-        else{
-            maptiles = map._layers[k];
-        }
-    });
-
-    //Keyboard interactions
-    var that = this;
-    var id = map._container.id;
-    $('#'+id).keypress(function (e) {
-        var code = e.keyCode || e.which;
-        if ( e.which == 13 ) {
-            e.preventDefault();
-        }
-
-        var heatmapop = heatmap.options.opacity;
-        var mapop = maptiles.options.opacity;
-
-        switch(code){
-            //Coarsening
-        case 44: //','
-            heatmap.coarselevels = Math.max(0,heatmap.coarselevels-1);
-            return heatmap.redraw();
-            break;
-        case 46: //'.'
-            heatmap.coarselevels = Math.min(8,heatmap.coarselevels+1);
-            return heatmap.redraw();
-            break;
-
-            //Opacity
-        case 60: //'shift + ,'
-            //decrease opacity
-            heatmapop = Math.max(heatmapop-0.1,0);
-            return heatmap.setOpacity(heatmapop);
-            break;
-        case 62:  //'shift + .'
-            //increase opacity
-            heatmapop = Math.min(heatmapop+0.1,1.0);
-            return heatmap.setOpacity(heatmapop);
-            break;
-
-        case 100: //'d'
-            //decrease opacity
-            mapop = Math.max(mapop-0.1,0);
-            return maptiles.setOpacity(mapop);
-            break;
-        case 98:  //'b'
-            //increase opacity
-            mapop = Math.min(mapop+0.1,1.0);
-            return maptiles.setOpacity(mapop);
-            break;
-
-        case 103: // 'g'
-            that.toggleGlobal(spvar);
-            return that.redraw(); //refresh
-            break;
-
-        case 115: // 's' smooth or blocky heatmap
-            heatmap.smooth = !heatmap.smooth;
-            return heatmap.redraw(); //refresh
-            break;
-
-        case 116: // 't' bin size change
-            var k = Object.keys(that.temporal_vars);
-            var tvar = that.temporal_vars[k[0]];
-            var hr = hourbSizes.shift();
-            hourbSizes.push(tvar.binSizeHour());
-            that.setTimeBinSize(hr,tvar);
-            return that.redraw(); //refresh
-            break;
-
-        case 99: // 'c' toggle count
-            return heatmap.toggleShowCount(); //refresh
-            break;
-
-        case 108: // 'l' toggle log scale
-            return heatmap.toggleLog(); //refresh
-            break;
-
-        default:
-            break;
-        }
-    });
 };
 
 //Generate queries with respect to different variables
@@ -721,37 +455,37 @@ Model.prototype.queries = function(vref){
     var that = this;
 
     //add constraints of the other variables
-    Object.keys(that.temporal_vars).forEach(function(v){
-        var thisvref = that.temporal_vars[v];
-        if (thisvref != vref){
+    _.each(that.temporal_vars, function(thisvref, v) {
+        if (thisvref !== vref){
             q = thisvref.constraints[0].add(q);
         }
     });
-    Object.keys(that.cat_vars).forEach(function(v){
-        var thisvref = that.cat_vars[v];
-        if (thisvref != vref){
+    _.each(that.cat_vars, function(thisvref, v) {
+        if (thisvref !== vref){
             q = thisvref.constraints[0].add(q);
         }
     });
 
     //add spatial view constraints
-    Object.keys(that.spatial_vars).forEach(function(v){
-        var thisvref = that.spatial_vars[v];
-        q = thisvref.view_const.add(q);
-    });
+    // _.each(that.spatial_vars, function(thisvref, v) {
+    //     q = thisvref.view_const.add(q);
+    // });
 
     //add spatial selection constraints
     var res = {};
-    Object.keys(that.spatial_vars).forEach(function(v){
-        var thisvref = that.spatial_vars[v];
-        Object.keys(thisvref.constraints).forEach(function(c){
-            var newq = $.extend(true, {}, q); //copy the query
-            res[c]  = thisvref.constraints[c].add(newq);
+    _.each(that.spatial_vars, function(thisvref, v) {
+        var hasAny = false;
+        _.each(thisvref.constraints, function(constraint, c) {
+            res[c]  = constraint.add(q.copy());
+            hasAny = true;
         });
+        if (!hasAny) {
+            res["location"] = q.copy();
+        }
     });
 
-    Object.keys(res).forEach(function(c){
-        res[c] = vref.constraints[0].addSelf(res[c]);
+    _.each(res, function(v, c) {
+        res[c] = vref.constraints[0].addSelf(v);
     });
 
     return res;
@@ -762,27 +496,22 @@ Model.prototype.totalcount_query = function(spconst){
     var q = this.nanocube.query();
     var that = this;
     //add constraints of the other variables
-    Object.keys(that.temporal_vars).forEach(function(v){
-        var thisvref = that.temporal_vars[v];
+    _.each(that.temporal_vars, function(thisvref) {
         q = thisvref.constraints[0].add(q);
     });
-    Object.keys(that.cat_vars).forEach(function(v){
-        var thisvref = that.cat_vars[v];
+    _.each(that.cat_vars, function(thisvref) {
         q = thisvref.constraints[0].add(q);
     });
 
-    if (spconst == undefined){
-        //add spatial view constraints
-        Object.keys(that.spatial_vars).forEach(function(v){
-            var thisvref = that.spatial_vars[v];
-            q = thisvref.view_const.add(q);
-        });
-    }
-    else{
+    if (spconst !== undefined){
         q = spconst.add(q);
     }
 
     return q;
+};
+
+Model.prototype.totalCount = function() {
+    return this._totalCount;
 };
 
 //Set the total count
@@ -824,16 +553,13 @@ Model.prototype.updateInfo = function(){
 
         var enddate = new Date(startdate);
         enddate.setTime(enddate.getTime()+dhours*3600*1000);
-
-        $('#info').text(startdate + ' - '+ enddate + ' '
-                        + ' Total: ' + countstr);
+        that._totalCount = {
+            startDate: startdate,
+            endDate: enddate,
+            total: countstr
+        };
+        that._resultsChanged();
     });
-};
-
-//Toggle view constraint for spatial variables
-Model.prototype.toggleGlobal = function(spvar){
-    spvar.toggleViewConst();
-    this.removeObsolete(spvar.dim);
 };
 
 //Set time aggregation
@@ -882,19 +608,7 @@ Model.prototype.updateTimeStep = function(stepsize,window){
     });
 };
 
-Model.prototype.animate = function(auto,stepsize,window){
-    auto = typeof auto !== 'undefined' ? auto : false;
-    var that = this;
-    if (auto){
-        this.cache_off = true;
-        this.interval = setInterval(function(){
-            that.updateTimeStep(stepsize,window);
-            console.log("auto refresh");
-        },1000);
-    }
-    else{
-        clearInterval(this.interval);
-        this.updateTimeStep(-1);
-        this.cache_off = false;
-    }
+Model.prototype.on = function(event, callback) {
+    this.listeners[event] = (this.listeners[event] || []);
+    this.listeners[event].push(callback);
 };

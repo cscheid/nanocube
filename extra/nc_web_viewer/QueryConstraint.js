@@ -1,14 +1,8 @@
-//Constraint Objects for queries
-function Constraint(dim){ this.dim = dim;}
-Constraint.prototype.add = function(q){};
-
 //Categorical Variable
 function CatConstraint(dim){
+    this.dim = dim;
     this.selection=[];
-    Constraint.call(this,dim);
 }
-CatConstraint.prototype=new Constraint();
-CatConstraint.prototype.constructor=CatConstraint;
 
 CatConstraint.prototype.add = function(q){
     if (this.selection.length < 1 ){
@@ -34,20 +28,16 @@ CatConstraint.prototype.addSelf = function(q){
     return q.drilldown().dim(this.dim).findAndDive();
 };
 
-
 //Temporal Variable
 function TemporalConstraint(dim,start,end,bintohour){
-    Constraint.call(this,dim);
-    this.start=start; 
-    this.nbins=end-start+1;
-    this.selection_start=start; 
-    this.selected_bins=this.nbins;
+    this.dim = dim;
+    this.start = start; 
+    this.nbins = end-start+1;
+    this.selection_start = start; 
+    this.selected_bins = this.nbins;
     this.bintohour = bintohour;
-    this.binsize=1;
+    this.binsize = 1;
 }
-
-TemporalConstraint.prototype=new Constraint();
-TemporalConstraint.prototype.constructor=TemporalConstraint;
 
 TemporalConstraint.prototype.binSize = function(binsize){
     this.binsize = binsize;
@@ -101,35 +91,14 @@ TemporalConstraint.prototype.setRange = function(start,end,offset){
 
 //Spatial Variable
 function SpatialConstraint(dim){
-    this.boundary=[];
-    Constraint.call(this,dim);
+    this.boundary = [];
+    this.dim = dim;
 }
-
-SpatialConstraint.prototype=new Constraint();
-SpatialConstraint.prototype.constructor=SpatialConstraint;
 
 SpatialConstraint.prototype.add = function(q){
     if (this.boundary.length < 3){
         return q;
     }
-    
-    //grab a bounding box
-    /*
-    var that = this;
-    var topleft = this.boundary.reduce(function(prev,curr) { 
-	return new Tile(Math.min(prev.x, curr.x),
-			Math.min(prev.y, curr.y),
-			Math.min(prev.level, curr.level), that.boundary[0]);
-    })
-    var bottomright = this.boundary.reduce(function(prev,curr) { 
-	return new Tile(Math.max(prev.x, curr.x),
-			Math.max(prev.y, curr.y),
-			Math.max(prev.level, curr.level), that.boundary[0]);
-    })
-    
-    return q.dim(this.dim).rectQuery(topleft,bottomright);
-    */
-    
     return q.dim(this.dim).polygonQuery(this.boundary);
 };
 

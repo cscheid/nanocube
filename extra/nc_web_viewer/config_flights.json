@@ -4,39 +4,27 @@
   "latlonbox": {
     "max": {
       "location": [
-        80.86585369109434, 
-        103.30718994140625
+          52,-60
       ]
     }, 
     "min": {
       "location": [
-        -84.75297543739013, 
-        13.60931396484375
+          20, -120.60931396484375
       ]
     }
   }, 
   "tilesurl": "http://{s}.tile.osm.org/{z}/{x}/{y}.png", 
   "heatmapmaxlevel": 25, 
   "div": {
-    "info": {
-      "opacity": 0.9, 
-      "padding": 0, 
-      "z-index": 1, 
-      "right": "1ch", 
-      "color": "white", 
-      "position": "absolute", 
-      "top": "1em", 
-      "height": "1em"
-    }, 
     "carrier": {
       "opacity": 0.8, 
-      "right": "1ch", 
+      "right": "1em", 
       "logaxis": false, 
       "height": "31em", 
-      "width": "45ch", 
+      "width": "25em", 
       "z-index": 1, 
       "displaynumcat": 18, 
-      "margin-left": "15ch", 
+      "margin-left": "3em", 
       "position": "absolute", 
       "alpha_order": true, 
       "top": "3em", 
@@ -58,7 +46,7 @@
       "z-index": 1, 
       "position": "absolute", 
       "background-color": "#555", 
-      "left": "1ch"
+      "left": "1em"
     }
   }
 }

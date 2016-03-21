@@ -21,7 +21,7 @@ function CatVar(dim, valnames, displaynumcat, alpha_order, value_function){
 
     //Set number of variables for display
     this.displaynumcat = Math.min(displaynumcat,
-				  Object.keys(this.keyaddr).length);
+                                  Object.keys(this.keyaddr).length);
 
     //Sort in alphabetical order ... or not ...
     this.alpha_order = alpha_order;
@@ -30,7 +30,7 @@ function CatVar(dim, valnames, displaynumcat, alpha_order, value_function){
 
 CatVar.prototype.jsonToList=function(json){
     if (json == null|| (typeof json.root.children=='undefined') ){
-	//nothing to do
+        //nothing to do
         return [];
     }
     var that = this;
@@ -42,24 +42,24 @@ CatVar.prototype.jsonToList=function(json){
     data.sort(function(a,b) {return -(a.value-b.value);});
     data = data.slice(0,this.displaynumcat);
     if (!this.alpha_order){
-	return data;
+        return data;
     }
 
     data.sort(function(a,b) {
-	var key_a = that.addrkey[a.addr];
-	var key_b = that.addrkey[b.addr];
+        var key_a = that.addrkey[a.addr];
+        var key_b = that.addrkey[b.addr];
 
-	try{
-	    if (!isNaN(key_a) && !isNaN(key_b)){
-		return key_a - key_b;
-	    }
-	    else{
-		return key_a.localeCompare(key_b);
-	    }
-	}
-	catch(e){
-	    return 0;
-	}
+        try{
+            if (!isNaN(key_a) && !isNaN(key_b)){
+                return key_a - key_b;
+            }
+            else{
+                return key_a.localeCompare(key_b);
+            }
+        }
+        catch(e){
+            return 0;
+        }
     });
     return data;
 };
@@ -113,7 +113,7 @@ TimeVar.prototype.jsonToList=function(json, bucketsize){
     var that = this;
     var globaloffset = that.constraints[0].start;
     var data = json.root.children.map(function(d){
-	var start = d.path[0]*bucketsize + globaloffset;
+        var start = d.path[0]*bucketsize + globaloffset;
         var startdate = new Date(that.date_offset);
         
         //Set time in milliseconds from 1970
@@ -149,27 +149,10 @@ function SpatialVar(dim){
 
     //setup constraint
     this.constraints = {};
-    this.view_const = new SpatialConstraint(dim);
-    this.constraints[this.dim] = this.view_const;
 }
 
 SpatialVar.prototype.jsonToList = function(json){
     return [];
-};
-
-SpatialVar.prototype.toggleViewConst = function(){
-    if (this.dim in this.constraints){
-        if (Object.keys(this.constraints) == 1){ //do not toggle
-            return;
-        }
-
-        this.constraints[this.dim] = null;
-        delete this.constraints[this.dim];
-    }
-    else{
-        this.constraints[this.dim] = this.view_const;
-    }
-
 };
 
 SpatialVar.prototype.addSelection = function(key,boundary,color){
@@ -184,18 +167,6 @@ SpatialVar.prototype.updateSelection = function(key,boundary){
 
 SpatialVar.prototype.deleteSelection = function(key){
     delete this.constraints[key];
-    if (Object.keys(this.constraints) < 1){ //toggle view
-        this.toggleViewConst();
-    }
 };
 
-SpatialVar.prototype.update=function(){
-    if ('heatmap' in this){
-        console.log('heatmap redraw');
-        this.heatmap.redraw();
-    }
-};
-
-SpatialVar.prototype.setCurrentView=function(boundary){
-    this.view_const.boundary = boundary;
-};
+SpatialVar.prototype.update=function(){};
