@@ -35,12 +35,10 @@ function Timeseries(name, margin){
     this.brush = d3.svg.brush().x(this.x);
 
     this.brush.on("brushstart", function(){
-        console.log("Brush started");
         d3.event.sourceEvent.stopPropagation();
     });
 
     this.brush.on("brushend", function(){
-        console.log("Brush ended");
         that.brushended();
     });
     
@@ -144,12 +142,9 @@ Timeseries.prototype.removeData=function(key){
 Timeseries.prototype.brushended=function(){    
     var start=0,end=0;
     if(!this.brush.empty()){ //reset
-        console.log("Brush not empty");
         var timerange = this.brush.extent();
         start = timerange[0];
         end = timerange[1];
-    } else {
-        console.log("Brush empty");
     }
 
     //use this callback to update the model
