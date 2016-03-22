@@ -9,22 +9,81 @@ function Model(opt){
     this.options = _.defaults(opt, {
         processValues: {},
         valueFunction: _.identity,
-        tileValueFunction: _.identity,
-        mapOptions: {
-            colormap: d3.scale.linear().domain([0, 1]).range(["black", "white"]),
-            selColor: d3.rgb(0.5, 0.5, 0.5)
-        }
+        tileValueFunction: _.identity
     });
 
     this.query_cache = {};
     this.selcolors = {};
 
-    //initialize the variables
+    this._totalCount = {};
     this.initVars();
 
-    this._totalCount = {};
-
     this.cache_off = false;
+};
+
+// FIXME clearly a hack for mid-refactoring
+Model.prototype.initViews = function() {
+    var variables = this.nanocube.schema.fields.filter(function(f){
+        return f.type.match(/^nc_dim/);
+    });
+
+    //loop through the schema and create the variables
+    var that = this;
+    variables.forEach(function(v){
+        var vref;
+        var t = v.type.match(/nc_dim_(.+)_(.+)/);
+
+        switch(t[1]){
+        case 'cat': //Create a categorical var and barchart
+            if ($('#'+v.name).length < 1){
+                return;
+            }
+            vref = that.cat_vars[v.name];
+            //init the gui component (move it elsewhere?)
+            vref.widget = new GroupedBarChart(v.name,
+                                              that.options.config['div'][v.name]['logaxis']);
+
+            //set selection and click callback
+            vref.widget.setSelection(vref.constraints[0].selection);
+            vref.widget.setClickCallback(function(d){
+                if (typeof d != "undefined") {
+                    var single = !d3.event.shiftKey; 
+                    vref.constraints[0].toggle(d.addr,single);
+                    d3.event.stopPropagation();
+                } else {
+                    vref.alpha_order = !vref.alpha_order;
+                }
+                that.redraw();
+            });
+            that.jsonQuery(vref);
+            break;
+
+        case 'time': //Create a temporal var and timeseries
+            if ($('#'+v.name).length < 1){
+                return;
+            }
+            vref = that.temporal_vars[v.name];
+
+            //init gui
+            vref.widget = new Timeseries(v.name);
+            vref.widget.brush_callback = function(start,end){
+                console.log("Brush callback");
+                vref.constraints[0].setSelection(start,end,vref.date_offset);
+                that.redraw(vref);
+            };
+            that.jsonQuery(vref);
+
+            vref.widget.update_display_callback=function(start,end){
+                console.log("Update display");
+                vref.constraints[0].setRange(start,end,vref.date_offset);
+                that.redraw();
+            };
+            break;
+        default:
+            break;
+        }
+    });
+
 };
 
 //Init Variables according to the schema
@@ -64,7 +123,6 @@ Model.prototype.initVars = function(){
             // if(that.options.smooth != undefined){
             //     vref.heatmap.smooth = that.options.smooth;
             // }
-            that.selcolors[v.name] = that.options.mapOptions.selColor;
             break;
 
         case 'cat': //Create a categorical var and barchart
@@ -76,24 +134,6 @@ Model.prototype.initVars = function(){
                                that.options.config['div'][v.name]['displaynumcat'],
                                that.options.config['div'][v.name]['alpha_order'],
                                that.options.valueFunction);
-
-            //init the gui component (move it elsewhere?)
-            vref.widget = new GroupedBarChart(v.name,
-                                              that.options.config['div'][v.name]['logaxis']);
-
-            //set selection and click callback
-            vref.widget.setSelection(vref.constraints[0].selection);
-            vref.widget.setClickCallback(function(d){
-                if (typeof d != "undefined") {
-                    var single = !d3.event.shiftKey; 
-                    vref.constraints[0].toggle(d.addr,single);
-                    d3.event.stopPropagation();
-                } else {
-                    vref.alpha_order = !vref.alpha_order;
-                }
-                that.redraw();
-            });
-            that.jsonQuery(vref);
 
             that.cat_vars[v.name] = vref;
             break;
@@ -110,29 +150,15 @@ Model.prototype.initVars = function(){
                                 tinfo.start,tinfo.end,
                                 tinfo.bin_to_hour,
                                 that.options.valueFunction);
-
-            var nbins = tinfo.end-tinfo.start+1;
-
-            //init gui
-            vref.widget = new Timeseries(v.name);
-            vref.widget.brush_callback = function(start,end){
-                vref.constraints[0].setSelection(start,end,vref.date_offset);
-                that.redraw(vref);
-            };
-            that.jsonQuery(vref);
-
-            vref.widget.update_display_callback=function(start,end){
-                vref.constraints[0].setRange(start,end,vref.date_offset);
-                that.redraw();
-            };
-
-            //set the timeseries to the finest resolution
-            while (tinfo.bin_to_hour >=  hourbSizes[0]){
-                hourbSizes.shift();
-            }
-
-            that.setTimeBinSize(tinfo.bin_to_hour,vref);
             that.temporal_vars[v.name] = vref;
+
+            // var nbins = tinfo.end-tinfo.start+1;
+            // //set the timeseries to the finest resolution
+            // while (tinfo.bin_to_hour >= hourbSizes[0]){
+            //     hourbSizes.shift();
+            // }
+            // that.setTimeBinSize(tinfo.bin_to_hour,vref);
+            
             break;
         default:
             break;
@@ -231,7 +257,6 @@ Model.prototype.getCache = function(qstr){
     }
 };
 
-
 //JSON Queries for Cat and Time Variables
 Model.prototype.jsonQuery = function(v){
     var queries = this.queries(v);
@@ -240,7 +265,7 @@ Model.prototype.jsonQuery = function(v){
     _.each(queries, function(q, k) {
         var qstr = q.toString('count');
         var json = that.getCache(qstr);
-        var color = that.selcolors[k];
+        var color = that.selcolors[k]; // HACK, this is coming from spatial_view.
 
         if (json != null) { // cached
             v.update(json,k,color,q);
@@ -254,199 +279,28 @@ Model.prototype.jsonQuery = function(v){
     });
 };
 
-//Remove unused constraints from variables
-Model.prototype.removeObsolete= function(k){
-    var that = this;
-    _.each(that.temporal_vars, function(temporal_var, v) {
-        temporal_var.removeObsolete(k);
-    });
-    _.each(that.cat_vars, function(cat_var, v) {
-        cat_var.removeObsolete(k);
-    });
-};
-
-//Colors
-Model.prototype.nextColor=function(){
-    var c =colors.shift();
-    colors.push(c);
-    return c;
-};
-
-//Add Rectangles and polygons controls
-Model.prototype.addDraw = function(map,spvar){
-    //Leaflet draw interactions
-    map.drawnItems = new L.FeatureGroup();
-    map.drawnItems.addTo(map);
-
-    map.editControl = new L.Control.Draw({
-        draw: {
-            rectangle: true,
-            polyline: false,
-            circle: false,
-            marker: false,
-            polygon: { allowIntersection: false }
-        },
-        edit: {
-            featureGroup: map.drawnItems
-        }
-    });
-    map.editControl.setDrawingOptions({
-        rectangle:{shapeOptions:{color: this.nextColor(), weight: 2,
-                                 opacity:.9}},
-        polygon:{shapeOptions:{color: this.nextColor(), weight: 2,
-                               opacity:.9}}
-    });
-
-    map.editControl.addTo(map);
-
-    //Leaflet created event
-    var that = this;
-    map.on('draw:created', function (e) {
-        that.drawCreated(e,spvar);
-    });
-
-    map.on('draw:deleted', function (e) {
-        that.drawDeleted(e,spvar);
-    });
-
-    map.on('draw:editing', function (e) {
-        that.drawEditing(e,spvar);
-    });
-
-    map.on('draw:edited', function (e) {
-        that.drawEdited(e,spvar);
-    });
-};
-
-//Functions for drawing / editing / deleting shapes
-Model.prototype.drawCreated = function(e,spvar){
-    //add the layer
-    spvar.map.drawnItems.addLayer(e.layer);
-
-    //update the contraints
-    var coords = e.layer.toGeoJSON().geometry.coordinates[0];
-    coords = coords.map(function(e){ return L.latLng(e[1],e[0]);});
-    coords.pop();
-
-    var tilelist = genTileList(coords,
-                               Math.min(spvar.maxlevel,e.target._zoom+8));
-    var color = e.layer.options.color;
-
-    this.selcolors[e.layer._leaflet_id] = color;
-    spvar.addSelection(e.layer._leaflet_id, tilelist);
-
-    //events for popups
-    var that = this;
-    e.layer.on('mouseover', function(){
-        //update polygon count before opening popup
-        that.updatePolygonCount(e.layer, spvar);
-        e.layer.openPopup();
-    });
-
-    e.layer.on('mouseout', function(){e.layer.closePopup();});
-
-
-    //set next color
-    if (e.layerType == 'rectangle'){
-        spvar.map.editControl.setDrawingOptions({
-            rectangle:{shapeOptions:{color: this.nextColor(),weight: 2,
-                                     opacity:.9}}
-        });
-    }
-
-    if (e.layerType == 'polygon'){
-        spvar.map.editControl.setDrawingOptions({
-            polygon:{shapeOptions:{color: this.nextColor(),weight: 2,
-                                   opacity:.9}}
-        });
-    }
-    this.redraw(spvar,false);
-};
-
-//draw count on the polygon
-Model.prototype.updatePolygonCount = function(layer, spvar){
-    var q = this.totalcount_query(spvar.constraints[layer._leaflet_id]);
-    var that = this;
-    q.run_query().done(function(json){
-        that.options.processValues(json.root);
-        var countstr ="Count: 0";
-        if (json != null) {
-            var count = that.options.countFunction(json.root.val);
-            countstr ="Count: ";
-            countstr += count.toString().replace(/\B(?=(\d{3})+(?!\d))/g,",");
-        }
-
-        var geojson = layer.toGeoJSON();
-        var bbox = bboxGeoJSON(geojson);
-        var bboxstr = "Bbox: ";
-        bboxstr += "(("+bbox[0][0].toFixed(3)+","+bbox[0][1].toFixed(3)+"),";
-        bboxstr += "("+bbox[1][0].toFixed(3)+","+bbox[1][1].toFixed(3)+"))";
-
-        layer.bindPopup(countstr+"<br />" +bboxstr);
-    });
-};
-
-Model.prototype.drawDeleted = function(e,spvar){
-    var layers = e.layers;
-    var that = this;
-    layers.eachLayer(function (layer) {
-        spvar.deleteSelection(layer._leaflet_id);
-        delete that.selcolors[layer._leaflet_id];
-        that.removeObsolete(layer._leaflet_id);
-    });
-    this.redraw();
-};
-
-Model.prototype.drawEdited = function(e,spvar){
-    var that = this;
-    var layers = e.layers;
-    layers.eachLayer(function (layer) {
-        var coords = layer.toGeoJSON().geometry.coordinates[0];
-        coords = coords.map(function(e){ return L.latLng(e[1],e[0]); });
-        coords.pop();
-        var tilelist = genTileList(coords, Math.min(spvar.maxlevel,
-                                                    e.target._zoom+8));
-        spvar.updateSelection(layer._leaflet_id,tilelist);
-    });
-
-    this.redraw(spvar,false);
-};
-
-Model.prototype.drawEditing = function(e,spvar){
-    var that = this;
-    var obj = e.layer._shape || e.layer._poly;
-
-    var coords = obj._latlngs; // no need to convert
-    var tilelist = genTileList(coords, Math.min(spvar.maxlevel,
-                                                e.target._zoom+8));
-    spvar.updateSelection(obj._leaflet_id,tilelist);
-    this.redraw(spvar,false);
-};
-
 //Panel
-Model.prototype.panelFuncs = function(maptiles,heatmap){
-    //panel btns
-    var that = this;
+Model.prototype.panelFuncs = function(maptiles, heatmap) {
+    // //panel btns
+    // var that = this;
 
-    $("#tbinsize-btn-dec").on('click', function(){
-        var k = Object.keys(that.temporal_vars);
-        var tvar = that.temporal_vars[k[0]];
-        var hr = hourbSizes.pop();
+    // $("#tbinsize-btn-dec").on('click', function(){
+    //     var k = Object.keys(that.temporal_vars);
+    //     var tvar = that.temporal_vars[k[0]];
+    //     var hr = hourbSizes.pop();
+    //     hourbSizes.unshift(tvar.binSizeHour());
+    //     that.setTimeBinSize(hr, tvar); //shift in reverse
+    //     return that.redraw(); //refresh
+    // });
 
-        hourbSizes.unshift(tvar.binSizeHour());
-        that.setTimeBinSize(hr, tvar); //shift in reverse
-        return that.redraw(); //refresh
-    });
-
-    $("#tbinsize-btn-inc").on('click', function(){
-        var k = Object.keys(that.temporal_vars);
-        var tvar = that.temporal_vars[k[0]];
-        var hr = hourbSizes.shift();
-
-        hourbSizes.push(tvar.binSizeHour());
-        that.setTimeBinSize(hr, tvar); //shift forward
-        return that.redraw(); //refresh
-    });
+    // $("#tbinsize-btn-inc").on('click', function(){
+    //     var k = Object.keys(that.temporal_vars);
+    //     var tvar = that.temporal_vars[k[0]];
+    //     var hr = hourbSizes.shift();
+    //     hourbSizes.push(tvar.binSizeHour());
+    //     that.setTimeBinSize(hr, tvar); //shift forward
+    //     return that.redraw(); //refresh
+    // });
 };
 
 //Generate queries with respect to different variables
@@ -562,13 +416,13 @@ Model.prototype.updateInfo = function(){
     });
 };
 
-//Set time aggregation
-Model.prototype.setTimeBinSize = function(hr, tvar){
-    var b2h = tvar.bin_to_hour;
-    //update on the time series plot
-    tvar.widget.setBinSizeTxt(hr);
-    tvar.setBinSize(Math.ceil(hr*1.0/b2h));
-};
+// //Set time aggregation
+// Model.prototype.setTimeBinSize = function(hr, tvar){
+//     var b2h = tvar.bin_to_hour;
+//     //update on the time series plot
+//     tvar.widget.setBinSizeTxt(hr);
+//     tvar.setBinSize(Math.ceil(hr*1.0/b2h));
+// };
 
 Model.prototype.updateTimeStep = function(stepsize,window){
     var that = this;

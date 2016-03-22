@@ -1,0 +1,64 @@
+{
+  "title": "crime50k.csv", 
+  "url": "http://localhost:29512", 
+  "latlonbox": {
+    "max": {
+      "location": [
+        42.02277326296909, 
+        -87.52532958984375
+      ]
+    }, 
+    "min": {
+      "location": [
+        41.646235928686764, 
+        -87.923583984375
+      ]
+    }
+  }, 
+  "tilesurl": "http://{s}.tile.osm.org/{z}/{x}/{y}.png", 
+  "heatmapmaxlevel": 25, 
+  "div": {
+    "info": {
+      "opacity": 0.9, 
+      "padding": 0, 
+      "z-index": 1, 
+      "right": "1ch", 
+      "color": "white", 
+      "position": "absolute", 
+      "top": "1em", 
+      "height": "1em"
+    }, 
+    "time": {
+      "opacity": 0.8, 
+      "bottom": "1em", 
+      "height": "10em", 
+      "width": "75%", 
+      "z-index": 1, 
+      "position": "absolute", 
+      "background-color": "#555", 
+      "left": "1ch"
+    }, 
+    "location": {
+      "padding": 0, 
+      "width": "100%", 
+      "z-index": 0, 
+      "float": "left", 
+      "margin": 0, 
+      "height": "100%"
+    }, 
+    "crime": {
+      "opacity": 0.8, 
+      "right": "1ch", 
+      "logaxis": false, 
+      "height": "41em", 
+      "width": "70ch", 
+      "z-index": 1, 
+      "displaynumcat": 25, 
+      "margin-left": "40ch", 
+      "position": "absolute", 
+      "alpha_order": true, 
+      "top": "3em", 
+      "background-color": "#555"
+    }
+  }
+}

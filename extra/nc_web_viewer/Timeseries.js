@@ -35,11 +35,13 @@ function Timeseries(name, margin){
     this.brush = d3.svg.brush().x(this.x);
 
     this.brush.on("brushstart", function(){
+        console.log("Brush started");
         d3.event.sourceEvent.stopPropagation();
     });
 
     this.brush.on("brushend", function(){
-        that.brushended(that);
+        console.log("Brush ended");
+        that.brushended();
     });
     
     //Zoom
@@ -58,6 +60,13 @@ function Timeseries(name, margin){
         if(!that.brush.empty()){ //set the size of the brush
             d3.select(this).call(that.brush.extent(bext));
         }
+    });
+
+    this.zoom.on("zoomend", function() {
+        that.zoomed();
+        that.brushended();
+        var xdom = that.x.domain();
+        that.update_display_callback(xdom[0],xdom[1]);
     });
 
     this.svg = d3.select(id).append("svg")
@@ -132,16 +141,19 @@ Timeseries.prototype.removeData=function(key){
 };
 
 
-Timeseries.prototype.brushended=function(that){    
+Timeseries.prototype.brushended=function(){    
     var start=0,end=0;
-    if(!that.brush.empty()){ //reset
-        var timerange = that.brush.extent();
+    if(!this.brush.empty()){ //reset
+        console.log("Brush not empty");
+        var timerange = this.brush.extent();
         start = timerange[0];
         end = timerange[1];
+    } else {
+        console.log("Brush empty");
     }
 
     //use this callback to update the model
-    that.brush_callback(start,end);
+    this.brush_callback(start,end);
 };
 
 Timeseries.prototype.zoomed=function(){
@@ -150,8 +162,8 @@ Timeseries.prototype.zoomed=function(){
     this.svg.select("g.y.axis").call(this.yAxis);
     this.svg.selectAll(".line").attr("class", "line").attr("d", this.line);
 
-    var xdom = this.x.domain();
-    this.update_display_callback(xdom[0],xdom[1]);
+    // var xdom = this.x.domain();
+    // this.update_display_callback(xdom[0],xdom[1]);
 };
 
 Timeseries.prototype.updateRanges=function(){

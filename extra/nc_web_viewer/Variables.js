@@ -1,8 +1,10 @@
 //Categorical Variable
-function CatVar(dim, valnames, displaynumcat, alpha_order, value_function){
+function CatVar(dim, valnames, displaynumcat, alpha_order, value_function,
+                key_function){
     //Display 25 categories by default
     displaynumcat=(typeof displaynumcat==="undefined")? 25:displaynumcat;    
     alpha_order=(typeof alpha_order==="undefined")? true:alpha_order;
+    console.log(alpha_order);
 
     this.dim = dim;
     
@@ -13,6 +15,7 @@ function CatVar(dim, valnames, displaynumcat, alpha_order, value_function){
     //setup categorical variable
     this.keyaddr = valnames;
     this.addrkey = {};
+    this.key_function = key_function || function(k) { return k; };
 
     var that = this;
     Object.keys(this.keyaddr).forEach(function(k){ 
@@ -38,7 +41,6 @@ CatVar.prototype.jsonToList=function(json){
         return { value: +that.value_function(d.val), addr: +d.path[0]  };
     });
 
-    var that = this;
     data.sort(function(a,b) {return -(a.value-b.value);});
     data = data.slice(0,this.displaynumcat);
     if (!this.alpha_order){
@@ -69,7 +71,7 @@ CatVar.prototype.update=function(json,id,color,q){
     var data = that.jsonToList(json);
 
     //turn addr to keys
-    data.forEach(function(d){d.cat=that.addrkey[d.addr];});
+    data.forEach(function(d){d.cat=that.key_function(that.addrkey[d.addr]);});
     
     //set the gui element and redraw()
     if ('widget' in that){
@@ -107,7 +109,7 @@ TimeVar.prototype.binSizeHour=function(){
 };
 
 TimeVar.prototype.jsonToList=function(json, bucketsize){
-    if (json.root.children == null){ //nothing to do
+    if (json.root.children == null){
         return [];
     }
     var that = this;
