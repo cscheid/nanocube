@@ -165,6 +165,7 @@ function init(config)
         heatmap = sp_view.nanocubeLayer;
         model.initViews();
         model.on("resultsChanged", ui.update);
+        model.on("highlightChanged", ui.update);
     });
 
     //////////////////////////////////////////////////////////////////////////
@@ -206,24 +207,20 @@ function init(config)
                       ui.text(" Total: "),
                       ui.text(totalCount.total));
     };
-    function mouseOverCount() {
+    function highlightCount() {
         var caption = "-";
-        if (!_.isUndefined(heatmap && heatmap.currentPixel)) {
-            caption = String(heatmap.currentPixel.count);
+        if (!_.isUndefined(model && model.highlightedValue)) {
+            caption = String(model.highlightedValue.count);
         }
         return ui.div(null, ui.text("Count: " + caption));
     }
-
-    ui.add(function() {
-        ui.state({ state: heatmap && heatmap.currentPixel,
-                   watchers: [function(v) { leg.updateHairLine(slope(v)); }]
-                 });
-    });
-    
     ui.add(function() {
         return ui.group(
+            ui.state({ state: model && model.highlightedValue,
+                       watchers: [function(v) { leg.updateHairLine(slope(v)); }]
+                     }),
             totalCountReactDiv(),
-            mouseOverCount(),
+            highlightCount(),
             ui.hr(),
             React.createElement("div", null, ui.checkBox({
                 change: function(state) {

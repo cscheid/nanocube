@@ -104,6 +104,7 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
             var targetV = (this._dict[pixelX] || {})[pixelY];
             var prevPixel = that.currentPixel;
             that.currentPixel = targetV;
+            that.model.highlightValue(targetV);
             if (targetV !== prevPixel) {
                 if (_.isUndefined(targetV)) {
                     that._on.valueLeave();
@@ -117,6 +118,7 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
         }).on("mouseleave", function() {
             if (!_.isUndefined(that.currentPixel)) {
                 that.currentPixel = undefined;
+                that.model.highlightValue(undefined);
                 that._on.valueLeave();
             }
         });

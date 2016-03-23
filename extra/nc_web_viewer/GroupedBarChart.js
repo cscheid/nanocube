@@ -27,6 +27,7 @@ function GroupedBarChart(opts){
     this.selection=null;
 
     this.id = id;
+    this.model = opts.model;
 
     var width = $(id).width() - margin.left - margin.right;
     var height = $(id).height()- margin.top - margin.bottom;
@@ -95,6 +96,7 @@ GroupedBarChart.prototype.updateAxis = function(data){
 };
 
 GroupedBarChart.prototype.setData = function(data,id,color){
+    debugger;
     this.data[id] = {color:color, data: data};
 };
 
@@ -112,7 +114,9 @@ GroupedBarChart.prototype.flattenData = function(data){
             return { addr: data[curr].data[k].addr, 
                      cat: data[curr].data[k].cat,
                      color: data[curr].color,
-                     value:data[curr].data[k].value };
+                     value: data[curr].data[k].value,
+                     fullValue: data[curr].data[k].fullValue
+                   };
         });
         return prev.concat(row);
     }, []);
@@ -155,6 +159,13 @@ GroupedBarChart.prototype.redraw = function(){
             else{
                 return 'gray';
             }
+        })
+        .on("mouseenter", function(d) {
+            debugger;
+            that.model.highlightValue(d.fullValue);
+        })
+        .on("mouseleave", function() {
+            that.model.highlightValue(undefined);
         })
         .append("svg:title") //tooltip
         .text(function(d) { return d3.format(',')(d.value); });   

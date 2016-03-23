@@ -18,7 +18,19 @@ function Model(opt){
     this._totalCount = {};
     this.initVars();
 
+    this.highlightedValue = undefined;
+
     this.cache_off = false;
+};
+
+Model.prototype.highlightValue = function(newValue)
+{
+    var oldValue = this.highlightedValue;
+    this.highlightedValue = newValue;
+    
+    if (newValue !== oldValue) {
+        this._highlightChanged();
+    }
 };
 
 // FIXME clearly a hack for mid-refactoring
@@ -43,7 +55,8 @@ Model.prototype.initViews = function() {
             vref.widget = new GroupedBarChart({
                 name: v.name,
                 logaxis: that.options.config['div'][v.name]['logaxis'],
-                tickFormat: null
+                tickFormat: null,
+                model: that
             });
 
             //set selection and click callback
@@ -203,6 +216,11 @@ Model.prototype._resultsChanged = function()
 Model.prototype._queryChanged = function()
 {
     _.each(this.listeners["queryChanged"], function(f) { f(); });
+};
+
+Model.prototype._highlightChanged = function()
+{
+    _.each(this.listeners["highlightChanged"], function(f) { f(); });
 };
 
 //Tile queries for Spatial Variables

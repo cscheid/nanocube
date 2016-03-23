@@ -58,7 +58,6 @@ function ColorLegend(opts)
         .attr("display", "none");
 
     this.updateHairLine = function(v) {
-        debugger;
         if (_.isUndefined(v)) {
             this.hairLine.attr("display", "none");
         } else {

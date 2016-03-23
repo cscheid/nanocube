@@ -38,7 +38,7 @@ CatVar.prototype.jsonToList=function(json){
     }
     var that = this;
     var data = json.root.children.map(function(d){
-        return { value: +that.value_function(d.val), addr: +d.path[0]  };
+        return { fullValue: d.val, value: +that.value_function(d.val), addr: +d.path[0]  };
     });
 
     data.sort(function(a,b) {return -(a.value-b.value);});
