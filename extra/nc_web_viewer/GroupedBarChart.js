@@ -1,6 +1,12 @@
 /*global $,d3 */
 
-function GroupedBarChart(name,logaxis){
+function GroupedBarChart(opts){
+    opts = _.defaults(opts, {
+        tickFormat: ',.1s'
+    });
+    var name = opts.name;
+    var logaxis = opts.logaxis;
+
     var margin = {top:20,right:10,left:30,bottom:30};
     var id = '#'+name;
 
@@ -48,7 +54,7 @@ function GroupedBarChart(name,logaxis){
     this.xAxis = d3.svg.axis()
         .scale(this.x)
         .orient("bottom")
-	.ticks(3,',.1s');
+	.ticks(3, opts.tickFormat);
 
     
     this.yAxis = d3.svg.axis()

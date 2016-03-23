@@ -9,7 +9,7 @@ function ColorLegend(opts)
     });
     
     this.svg = opts.element.append("svg")
-        .attr("width",opts.width)
+        .attr("width", opts.width)
         .attr("height", opts.height);
 
     var xScale = d3.scale.linear().range([10, opts.width + 10]);
@@ -46,6 +46,26 @@ function ColorLegend(opts)
         .classed("color-legend", true)
         .attr("transform", "translate(0,40)");
     this.axisGroup.call(this.axis);
+
+    this.hairLine = this.svg
+        .append("g")
+        .append("line")
+        .attr("y1", 10)
+        .attr("y2", 40)
+        .attr("x1", 200)
+        .attr("x2", 200)
+        .attr("stroke", "black")
+        .attr("display", "none");
+
+    this.updateHairLine = function(v) {
+        debugger;
+        if (_.isUndefined(v)) {
+            this.hairLine.attr("display", "none");
+        } else {
+            var x = this.colorPreScale.invert(xScale(v));
+            this.hairLine.attr("display", null).attr("x1", x).attr("x2", x);
+        }
+    };
 }
 
 ColorLegend.prototype.redraw = function()

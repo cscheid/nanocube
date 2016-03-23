@@ -11,6 +11,10 @@ L.NanocubeLayer = L.TileLayer.Canvas.extend({
         });
         this.show_count = false;
         this.process_values = options.processValues;
+        this._on = { valueEnter: options.valueEnter || function() {},
+                     valueLeave: options.valueLeave || function() {},
+                     valueMove: options.valueMove   || function() {} };
+        this.currentPixel = undefined;
     }
 });
 
@@ -29,7 +33,6 @@ L.NanocubeLayer.prototype.redraw = function(){
     }
     return this;
 };
-
 
 L.NanocubeLayer.prototype.drawTile = function(canvas, tilePoint, zoom){
     var drill = Math.min(this.variable.maxlevel-zoom,8) - this.coarselevels ;
@@ -68,9 +71,15 @@ L.NanocubeLayer.prototype.drawTile = function(canvas, tilePoint, zoom){
         var data = that.processJSON(json);
         if (data === null) {
             canvas._data = null;
+            canvas._dict = {};
             return;
         }
         canvas._data = data;
+        canvas._dict = {};
+        _.each(data, function(el) {
+            var d2 = canvas._dict[el.x] || (canvas._dict[el.x] = {});
+            d2[el.y] = el.v;
+        });
         if (that.mapOptions.updateBounds(data)) {
             for (var i in that._tiles) {
                 that.renderTile(that._tiles[i], size, that._tiles[i]._tilePoint,
@@ -83,10 +92,34 @@ L.NanocubeLayer.prototype.drawTile = function(canvas, tilePoint, zoom){
     that.tileDrawn(canvas);
 };
 
-L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint,zoom){
-    // d3.select(canvas).classed("heatmap", true);
+L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
     var data = canvas._data;
     var ctx = canvas.getContext('2d');
+    var coarse = this.coarselevels;
+    var that = this;
+    d3.select(canvas)
+        .on("mousemove", function() {
+            var pixelX =        d3.event.offsetX  >> coarse,
+                pixelY = (255 - d3.event.offsetY) >> coarse;
+            var targetV = (this._dict[pixelX] || {})[pixelY];
+            var prevPixel = that.currentPixel;
+            that.currentPixel = targetV;
+            if (targetV !== prevPixel) {
+                if (_.isUndefined(targetV)) {
+                    that._on.valueLeave();
+                } else {
+                    that._on.valueEnter(targetV);
+                }
+            }
+            if (!_.isUndefined(targetV)) {
+                that._on.valueMove(targetV);
+            }
+        }).on("mouseleave", function() {
+            if (!_.isUndefined(that.currentPixel)) {
+                that.currentPixel = undefined;
+                that._on.valueLeave();
+            }
+        });
 
     if (data == null){
         var imgBlankData = ctx.createImageData(canvas.width,canvas.height);
@@ -103,7 +136,7 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint,zoom){
     var pixels = imgData.data;
     var length = pixels.length;
 
-    if (! this.smooth){ //blocky rendering
+    if (!this.smooth) { //blocky rendering
         ctx.imageSmoothingEnabled = false;
         ctx.webkitImageSmoothingEnabled = false;
         ctx.mozImageSmoothingEnabled = false;

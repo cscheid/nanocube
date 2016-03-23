@@ -8,7 +8,6 @@ var spatial_view = function(opts)
     
     opts.model.selcolors = {}; // FIXME
     var selcolors = opts.model.selcolors;
-    debugger;
     selcolors[opts.variable.dim] = opts.selectionColor;
 
     opts = _.defaults(opts || {}, {});

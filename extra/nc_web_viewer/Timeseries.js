@@ -1,15 +1,16 @@
 /*global $,d3 */
 
-function Timeseries(name, margin){
-    var id = '#'+name;
+function Timeseries(opts){
+    opts = _.defaults(opts, {
+        margin: {top: 30, right: 10, bottom: 30, left: 50},
+        tickFormat: ',s'
+    });
+    var margin = opts.margin;
+                     
+    var id = '#'+opts.name;
 
     this.data = {};
     this.brush_callback = null;
-
-    //code
-    if (margin==undefined){
-        margin = {top: 30, right: 10, bottom: 30, left: 50};
-    }
 
     var width = $(id).width() - margin.left - margin.right;
     var height = $(id).height()- margin.top - margin.bottom;
@@ -27,7 +28,7 @@ function Timeseries(name, margin){
     this.yAxis = d3.svg.axis()
         .scale(this.y)
         .orient("left")
-        .ticks(3,',s');
+        .ticks(3, opts.tickFormat);
 
     var that = this;
 

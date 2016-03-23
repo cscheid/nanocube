@@ -40,7 +40,7 @@ text {
 }
 
 img.leaflet-tile {
-    -webkit-filter: saturate(20%) invert(100%);
+    -webkit-filter: saturate(20%) invert(100%) brightness(50%);
 }
 
 #total {
@@ -91,3 +91,10 @@ html.paper g.color-legend text {
     fill: black;
 }
 
+hr {
+    height: 1px;
+    color: rgba(192, 192, 192, 0.25);
+    background: rgba(192, 192, 192, 0.25);
+    font-size: 0;
+    border: 0;
+}

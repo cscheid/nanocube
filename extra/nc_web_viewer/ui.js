@@ -54,9 +54,31 @@ ui = (function() {
         }
     });
 
+    var Hr = React.createClass({
+        render: function() { return React.createElement("hr", {}); }
+    });
+
     var els = [];
+
+    var StateCell = React.createClass({
+        componentDidMount: function() {
+            if (this.props.watchers) {
+                var s = this.props.state;
+                this.props.watchers.forEach(function(w) { w(s); });
+            }
+        },
+        componentWillReceiveProps: function(nextProps) {
+            if (this.props.watchers &&
+                this.props.state !== nextProps.state) {
+                var s = nextProps.state;
+                this.props.watchers.forEach(function(w) { w(s); });
+            }
+        },
+        render: function() { return null; }
+    });
     
     var ui = {
+        state: function(obj) { return React.createElement(StateCell, obj); },
         button: function(obj) { return React.createElement(Button, obj); },
         checkBox: function(obj) { return React.createElement(CheckBox, obj); },
         incDecButtons: function(obj) { return React.createElement(IncDecButtonGroup, obj); },
@@ -76,7 +98,8 @@ ui = (function() {
         text: function(text) {
             return React.createElement(Text, { text: text });
         },
-        
+        hr: function() { return React.createElement(Hr, {}); },
+
         //////////////////////////////////////////////////////////////////////
         
         add: function(renderfun, dom_element) {

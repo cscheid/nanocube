@@ -40,8 +40,11 @@ Model.prototype.initViews = function() {
             }
             vref = that.cat_vars[v.name];
             //init the gui component (move it elsewhere?)
-            vref.widget = new GroupedBarChart(v.name,
-                                              that.options.config['div'][v.name]['logaxis']);
+            vref.widget = new GroupedBarChart({
+                name: v.name,
+                logaxis: that.options.config['div'][v.name]['logaxis'],
+                tickFormat: null
+            });
 
             //set selection and click callback
             vref.widget.setSelection(vref.constraints[0].selection);
@@ -65,7 +68,10 @@ Model.prototype.initViews = function() {
             vref = that.temporal_vars[v.name];
 
             //init gui
-            vref.widget = new Timeseries(v.name);
+            vref.widget = new Timeseries({
+                name: v.name,
+                tickFormat: null
+            });
             vref.widget.brush_callback = function(start,end){
                 console.log("Brush callback");
                 vref.constraints[0].setSelection(start,end,vref.date_offset);

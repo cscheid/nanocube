@@ -80,11 +80,9 @@ function init(config)
             .range([0, 1, 1])
             .clamp(true);
     
-    function count(v) { return v.count; }
-    function slope(v) { return v.parameters[0]; }
-    function totalError(v) {
-        return v.error[0];
-    }
+    function count(v) { return v && v.count; }
+    function slope(v) { return v && v.parameters[0]; }
+    function totalError(v) { return v && v.error[0]; }
 
     var count_extent_tracker = track_extent(count);
     var slope_extent_tracker = track_three_sigmas_extent(slope, count);
@@ -143,6 +141,8 @@ function init(config)
                 coarseLevels: 4,
                 opacity: 1.0,
                 model: model,
+                valueEnter: ui.update,
+                valueLeave: ui.update,
                 mapOptions: {
                     colormap: colormap,
                     resetBounds: function() {
@@ -164,13 +164,20 @@ function init(config)
         geomap = sp_view.geoMap;
         heatmap = sp_view.nanocubeLayer;
         model.initViews();
-        model.on("resultsChanged", function() {
-            ui.update();
-        });
+        model.on("resultsChanged", ui.update);
     });
 
     //////////////////////////////////////////////////////////////////////////
-    // UI
+    
+    var leg = new ColorLegend({
+        element: d3.select("body")
+            .append("div")
+            .attr("style", "position: fixed; top: 1em; left: 5em"),
+        scale: d3_colormap
+    });
+
+    //////////////////////////////////////////////////////////////////////////
+    // React UI
 
     function increaseRadius() { sp_view.radius(sp_view.radius() + 1); };
     function decreaseRadius() { sp_view.radius(sp_view.radius() - 1); };
@@ -199,10 +206,25 @@ function init(config)
                       ui.text(" Total: "),
                       ui.text(totalCount.total));
     };
+    function mouseOverCount() {
+        var caption = "-";
+        if (!_.isUndefined(heatmap && heatmap.currentPixel)) {
+            caption = String(heatmap.currentPixel.count);
+        }
+        return ui.div(null, ui.text("Count: " + caption));
+    }
+
+    ui.add(function() {
+        ui.state({ state: heatmap && heatmap.currentPixel,
+                   watchers: [function(v) { leg.updateHairLine(slope(v)); }]
+                 });
+    });
     
     ui.add(function() {
         return ui.group(
             totalCountReactDiv(),
+            mouseOverCount(),
+            ui.hr(),
             React.createElement("div", null, ui.checkBox({
                 change: function(state) {
                     log = state;
@@ -211,6 +233,7 @@ function init(config)
                 }, label: "Log-scale colormap",
                 checked: log
             })),
+            ui.hr(),
             React.createElement("div", null, ui.checkBox({
                 change: function(evt) {
                     heatmap.toggleShowCount();
@@ -251,13 +274,6 @@ function init(config)
                 ui.update();
             }
         }));
-
-    var leg = new ColorLegend({
-        element: d3.select("body")
-            .append("div")
-            .attr("style", "position: fixed; top: 1em; left: 5em"),
-        scale: d3_colormap
-    });
 }
 
 function main() {
