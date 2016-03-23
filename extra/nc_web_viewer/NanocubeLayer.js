@@ -125,8 +125,9 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
         });
 
     if (data == null){
-        var imgBlankData = ctx.createImageData(canvas.width,canvas.height);
-        ctx.putImageData(imgBlankData,0,0);
+        // var imgBlankData = ctx.createImageData(canvas.width,canvas.height);
+        // ctx.putImageData(imgBlankData,0,0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (this.show_count){//draw grid box
             this.drawGridCount(ctx,tilePoint,zoom,data);
@@ -168,8 +169,9 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
     var sc = canvas.width*1.0/size;
 
     //clear the canvas
-    imgBlankData = ctx.createImageData(canvas.width,canvas.height);
-    ctx.putImageData(imgBlankData,0,0);
+    // imgBlankData = ctx.createImageData(canvas.width,canvas.height);
+    // ctx.putImageData(imgBlankData,0,0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     //scale
     if (sc !== 1) {
