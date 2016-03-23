@@ -68,14 +68,35 @@ function track_extent(accessor)
 //     return result;
 // }
 
+function fasterColormap(domain, range)
+{
+    var length = range.length - 1, last = range[range.length - 1];
+    return function(v) {
+        v = Math.min(domain[1], Math.max(domain[0], v));
+        var u = (v - domain[0]) / (domain[1] - domain[0]);
+        
+        if (u === 1.0) {
+            return { r: last.r, g: last.g, b: last.b, a: last.a };
+        }
+
+        var u_long = u * length;
+        var i = ~~(u_long), f = u_long - i;
+        return { r: range[i].r * (1-f) + range[i+1].r * f,
+                 g: range[i].g * (1-f) + range[i+1].g * f,
+                 b: range[i].b * (1-f) + range[i+1].b * f };
+    };
+}
+
 function init(config)
 {
     var log = true;
 
-    var colors = colorbrewer.Spectral[9].slice().reverse();
-    var d3_colormap = d3.scale.linear()
-            .range(colors)
-            .clamp(true);
+    var colors = colorbrewer.Spectral[9].slice().reverse().map(function(d) {
+        var r = d3.rgb(d);
+        r.a = 255;
+        return r;
+    });
+    var d3_colormap = function() { return { r: 0, g: 0, b: 0, a: 0 }; };
     var opacityMap = d3.scale.linear()
             .range([0, 1, 1])
             .clamp(true);
@@ -88,20 +109,26 @@ function init(config)
     function colormap(v) {
         var c = count(v);
         var cmin = count_extent_tracker.extent()[0], cmax = count_extent_tracker.extent()[1];
+        var c2 = c;
         if (log) {
             cmin = Math.log(cmin + 1);
             cmax = Math.log(cmax + 1);
             c = Math.log(c + 1);
         }
-        opacityMap.domain([cmin, cmin * 2/3 + cmax * 1/3, cmax]);
-        var t = d3.rgb(d3_colormap(count(v)));
+        var t = d3_colormap(c2);
         return { r: +t.r, g: +t.g, b: +t.b, a: opacityMap(c)*255 };
     }
 
     function updateColorMap() {
+        var cmin = count_extent_tracker.extent()[0];
         var cmax = count_extent_tracker.extent()[1];
-        var rangeLength = d3_colormap.range().length;
-        d3_colormap.domain(d3.range(rangeLength).map(function(d) { return (d / (rangeLength-1)) * cmax; }));
+
+        d3_colormap = fasterColormap([cmin, cmax], colors);
+        if (log) {
+            cmin = Math.log(cmin + 1);
+            cmax = Math.log(cmax + 1);
+        }
+        opacityMap.domain([cmin, cmin * 2/3 + cmax * 1/3, cmax]);
     }
 
     var selColor = d3.rgb(255, 128, 0);
@@ -145,6 +172,7 @@ function init(config)
                     updateBounds: function(data) {
                         var r = count_extent_tracker.update(data);
                         if (r) {
+                            
                             updateColorMap();
                         }
                         // if (changedCount) {
@@ -207,6 +235,12 @@ function init(config)
             React.createElement("div", null, ui.checkBox({
                 change: function(state) {
                     log = state;
+                    var cmin = count_extent_tracker.extent()[0], cmax = count_extent_tracker.extent()[1];
+                    if (log) {
+                        cmin = Math.log(cmin + 1);
+                        cmax = Math.log(cmax + 1);
+                    }
+                    opacityMap.domain([cmin, cmin * 2/3 + cmax * 1/3, cmax]);
                     console.log("heatmap redraw");
                     heatmap.redraw();
                 }, label: "Log-scale colormap",
