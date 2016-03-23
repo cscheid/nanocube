@@ -390,7 +390,7 @@ function CalculatePCA(vec) {
 
     var covMat = new Array(d);
     for(var i = 0; i < d; i ++) {
-        covMat[i] = new Array(d);
+        covMat[i] = new Float64Array(d);
     }
 
     // build the upper triangular area
