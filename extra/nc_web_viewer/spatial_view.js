@@ -11,10 +11,12 @@ var spatial_view = function(opts)
     selcolors[opts.variable.dim] = opts.selectionColor;
 
     opts = _.defaults(opts || {}, {});
-    opts.geoMap = _.defaults(opts.geoMap || {}, {
-        tilesURL: "http://{s}.tile.osm.org/{z}/{x}/{y}.png",
-        opacity: 1.0
-    });
+    if (opts.geoMap) {
+        opts.geoMap = _.defaults(opts.geoMap, {
+            tilesURL: "http://{s}.tile.osm.org/{z}/{x}/{y}.png",
+            opacity: 1.0
+        });
+    };
     var leaflet = new L.map(opts.divId, {
         maxZoom: Math.min(18, opts.variable.maxlevel + 1)
     });
@@ -59,7 +61,7 @@ var spatial_view = function(opts)
 
     //////////////////////////////////////////////////////////////////////////
 
-    var geoOpacity = opts.geoMap.opacity,
+    var geoOpacity = mapTile && opts.geoMap.opacity,
         heatMapOpacity = opts.nanocubeLayer.opacity;
     
     var result = {

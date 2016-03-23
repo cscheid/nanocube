@@ -295,7 +295,16 @@ Model.prototype.jsonQuery = function(v){
             v.update(json,k,color,q);
         } else {
             q.run_query().done(function(json){
-                json.root.children.forEach(that.options.processValues);
+                switch (json.layers.length) {
+                case 0:
+                    that.options.processValues(json.root);
+                    break;
+                case 1:
+                    json.root.children.forEach(that.options.processValues);
+                    break;
+                default:
+                    throw new Error("Don't know how to process query with more than 1 layer.");
+                }
                 v.update(json,k,color,q);
                 that.setCache(qstr,json);
             });

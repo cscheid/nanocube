@@ -96,7 +96,6 @@ GroupedBarChart.prototype.updateAxis = function(data){
 };
 
 GroupedBarChart.prototype.setData = function(data,id,color){
-    debugger;
     this.data[id] = {color:color, data: data};
 };
 
@@ -161,7 +160,6 @@ GroupedBarChart.prototype.redraw = function(){
             }
         })
         .on("mouseenter", function(d) {
-            debugger;
             that.model.highlightValue(d.fullValue);
         })
         .on("mouseleave", function() {

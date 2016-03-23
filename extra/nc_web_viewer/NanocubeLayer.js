@@ -18,6 +18,7 @@ L.NanocubeLayer = L.TileLayer.Canvas.extend({
     }
 });
 
+// FIXME this name is horrible.
 L.NanocubeLayer.prototype.toggleShowCount = function(){
     this.show_count = !this.show_count;
     this.redraw();
@@ -151,6 +152,10 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
         var color = that.mapOptions.colormap(d.v);
         if (!color)
             return;
+        if (_.isString(color)) {
+            color = d3.rgb(color);
+            color.a = 255;
+        }
 
         var idx = (imgData.height-1-d.y)*imgData.width + d.x;
         pixels[idx*4]=color.r;
@@ -185,6 +190,7 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
 };
 
 L.NanocubeLayer.prototype.drawGridCount = function(ctx,tilePoint,zoom,data){
+    debugger;
     ctx.lineWidth="0.5";
     ctx.strokeStyle="white";
     ctx.rect(0,0,ctx.canvas.width,ctx.canvas.height);
