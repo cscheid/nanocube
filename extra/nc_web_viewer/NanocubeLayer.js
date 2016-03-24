@@ -98,41 +98,39 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
     var ctx = canvas.getContext('2d');
     var coarse = this.coarselevels;
     var that = this;
-    d3.select(canvas)
-        .on("mousemove", function() {
-            var pixelX =        d3.event.offsetX  >> coarse,
-                pixelY = (255 - d3.event.offsetY) >> coarse;
-            var targetV = (this._dict[pixelX] || {})[pixelY];
-            var prevPixel = that.currentPixel;
-            that.currentPixel = targetV;
-            that.model.highlightValue(targetV);
-            if (targetV !== prevPixel) {
-                if (_.isUndefined(targetV)) {
-                    that._on.valueLeave();
-                } else {
-                    that._on.valueEnter(targetV);
-                }
-            }
-            if (!_.isUndefined(targetV)) {
-                that._on.valueMove(targetV);
-            }
-        }).on("mouseleave", function() {
-            if (!_.isUndefined(that.currentPixel)) {
-                that.currentPixel = undefined;
-                that.model.highlightValue(undefined);
+    canvas.onmousemove = function(event) {
+        var pixelX =        event.offsetX  >> coarse,
+            pixelY = (255 - event.offsetY) >> coarse;
+        var targetV = ((this._dict || {})[pixelX] || {})[pixelY];
+        var prevPixel = that.currentPixel;
+        that.currentPixel = targetV;
+        that.model.highlightValue(targetV);
+        if (targetV !== prevPixel) {
+            if (_.isUndefined(targetV)) {
                 that._on.valueLeave();
+            } else {
+                that._on.valueEnter(targetV);
             }
-        });
+        }
+        if (!_.isUndefined(targetV)) {
+            that._on.valueMove(targetV);
+        }
+    };
+    canvas.onmouseleave = function() {
+        if (!_.isUndefined(that.currentPixel)) {
+            that.currentPixel = undefined;
+            that.model.highlightValue(undefined);
+            that._on.valueLeave();
+        }
+    };
 
     if (data == null){
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         if (this.show_count){//draw grid box
             this.drawGridCount(ctx,tilePoint,zoom,data);
         }
         return;
     }
-
 
     var imgData=ctx.createImageData(size,size);
     var pixels = imgData.data;
@@ -144,21 +142,20 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
         ctx.mozImageSmoothingEnabled = false;
     }
 
-    data.forEach(function(d){
-        var color = that.mapOptions.colormap(d.v);
+    for (var i=0; i < data.length; ++i) {
+        var color = that.mapOptions.colormap(data[i].v);
         if (!color)
             return;
         if (_.isString(color)) {
             color = d3.rgb(color);
             color.a = 255;
         }
-
-        var idx = (imgData.height-1-d.y)*imgData.width + d.x;
+        var idx = (imgData.height-1-data[i].y)*imgData.width + data[i].x;
         pixels[idx*4]=color.r;
         pixels[idx*4+1]=color.g;
         pixels[idx*4+2]=color.b;
-        pixels[idx*4+3]=color.a;
-    });
+        pixels[idx*4+3]=color.a;        
+    }
 
     //set image
     var sc = canvas.width*1.0/size;
@@ -205,17 +202,8 @@ L.NanocubeLayer.prototype.drawGridCount = function(ctx,tilePoint,zoom,data){
 
 L.NanocubeLayer.prototype.processJSON = function(json) {
     var that = this;
-    try {
-        if (json.root.children.length === 0) {
-            return null;
-        }
-    } catch (e) {
+    if (!json || !json.root || !json.root.children || json.root.children.length === 0)
         return null;
-    }
-    if (json.root.children === null ||
-        json.root.children.length === 0) {
-        return null;
-    }
     json.root.children.forEach(this.process_values);
 
     var data = json.root.children.map(function(d){

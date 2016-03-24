@@ -1,3 +1,5 @@
+var emlapack = require('./lib/emlapack.js');
+
 // // This is the function that takes the raw nanocube values
 // // and processes them into a model.
 function processValues(v) {
@@ -285,8 +287,107 @@ function init(config)
     //     }));
 }
 
-function main() {
+lapack = {
+    dsyev: (function setupDsyev() {
+        var dsyev = emlapack.cwrap('dsyev_', null, ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number']);
+        
+        var pjobz    = emlapack._malloc(1);
+        var puplo    = emlapack._malloc(1);
+        var pn       = emlapack._malloc(4);
+        var plda     = emlapack._malloc(4);
+        var plwork   = emlapack._malloc(4);
+        var pinfo    = emlapack._malloc(4);
+        var pworkopt = emlapack._malloc(4);
+
+        return function(jobz, uplo, aIn) {
+            var n = ~~Math.sqrt(aIn.length);
+            emlapack.setValue(pjobz,   jobz.charCodeAt(0), 'i8');
+            emlapack.setValue(puplo,   uplo.charCodeAt(0), 'i8');
+            emlapack.setValue(pn,      n, 'i32');
+            emlapack.setValue(plda,    n, 'i32');
+            emlapack.setValue(plwork, -1, 'i32');
+            var pw = emlapack._malloc(n * 8);
+            var pa = emlapack._malloc(n * n * 8);
+            var a = new Float64Array(emlapack.HEAPF64.buffer, pa, n * n);
+            var w = new Float64Array(emlapack.HEAPF64.buffer, pw, n);
+            a.set(aIn);
+            dsyev(pjobz, puplo, pn, pa, plda, pw, pworkopt, plwork, pinfo);
+            var workopt = emlapack.getValue(pworkopt, 'double'),
+                pwork   = emlapack._malloc(workopt * 8);
+            emlapack.setValue(plwork, workopt, 'i32');
+            dsyev(pjobz, puplo, pn, pa, plda, pw, pwork, plwork, pinfo);
+
+            var result = {
+                vec: new Float64Array(a),
+                val: new Float64Array(w),
+                info: emlapack.getValue(pinfo, 'i32')
+            };
+
+            emlapack._free(pwork);
+            emlapack._free(pa);
+            emlapack._free(pw);
+            return result;
+        };
+    })()
+};
+
+// function setupEmlapack() {
+//     var dsyev = emlapack.cwrap('dsyev_', null, ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number']),
+//         n = 5,
+//         pjobz = emlapack._malloc(1),
+//         puplo = emlapack._malloc(1),
+//         pn = emlapack._malloc(4),
+//         pa = emlapack._malloc(n * n * 8),
+//         plda = emlapack._malloc(4),
+//         pw = emlapack._malloc(n * 8),
+//         plwork = emlapack._malloc(4),
+//         pinfo = emlapack._malloc(4),
+//         pworkopt = emlapack._malloc(4);
+
+//     debugger;
+    
+//     emlapack.setValue(pjobz, 'V'.charCodeAt(0), 'i8');
+//     emlapack.setValue(puplo, 'L'.charCodeAt(0), 'i8');
+//     emlapack.setValue(pn,      n, 'i32');
+//     emlapack.setValue(plda,    n, 'i32');
+//     emlapack.setValue(plwork, -1, 'i32');
+
+//     var a = new Float64Array(emlapack.HEAPF64.buffer, pa, n * n);
+//     var w = new Float64Array(emlapack.HEAPF64.buffer, pw, n);
+
+//     // a.set([ 1.96,    0,     0,   0, 0,
+//     //        -6.49,  3.8,     0,   0, 0,
+//     //        -0.47, -6.39, 4.17,   0, 0,
+//     //        -7.2,   1.5, -1.51, 5.7, 0,
+//     //        -0.65, -6.34, 2.67, 1.8, -7.1]);
+
+//     a.set([ 1, 0.5, 0, 0, 0,
+//             0,   1, 0, 0, 0,
+//             0,   0, 0, 0, 0,
+//             0,   0, 0, 0, 0,
+//             0,   0, 0, 0, 0]);
+
+//     dsyev(pjobz, puplo, pn, pa, plda, pw, pworkopt, plwork, pinfo);
+
+//     var workopt = emlapack.getValue(pworkopt, 'double'),
+//         pwork   = emlapack._malloc(workopt * 8);
+//     emlapack.setValue(plwork, workopt, 'i32');
+
+//     dsyev(pjobz, puplo, pn, pa, plda, pw, pwork, plwork, pinfo);
+
+//     console.log(w);
+// }
+
+// screw you, browserify, we're going to write into the global object.
+
+window.main = function() {
+    // debugger;
+    // console.log(lapack.dsyev('V', 'L', [ 1, 0.5, 0, 0, 0,
+    //                                      0,   1, 0, 0, 0,
+    //                                      0,   0, 0, 0, 0,
+    //                                      0,   0, 0, 0, 0,
+    //                                      0,   0, 0, 0, 0]));
     d3.json("config_sdss_types.json", function(error, data) {
         init(data);
     });
-}
+};
