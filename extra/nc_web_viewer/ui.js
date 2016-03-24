@@ -9,13 +9,29 @@ ui = (function() {
             });
         }
     });
-
+    
     var Text = React.createClass({
         render: function() {
             return React.createElement("span", { className: "ui" }, this.props.text);
         }
     });
-    
+
+    var Table = React.createClass({
+        render: function() {
+            var lines = [];
+            for (var i=0; i<this.props.values.length; ++i) {
+                var line = [];
+                for (var j=0; j<this.props.values[i].length; ++j) {
+                    line.push(React.createElement("td", { className: "ui" }, this.props.values[i][j]));
+                }
+                line.unshift("tr", {className: "ui"});
+                lines.push(React.createElement.apply(null, line));
+            }
+            lines.unshift("tbody", {className: "ui"});
+            return React.createElement("table", {className: "ui"}, React.createElement.apply(null, lines));
+        }
+    });
+
     var CheckBox = React.createClass({
         handleChange: function(event) {
             this.props.change(event.target.checked);
@@ -99,6 +115,9 @@ ui = (function() {
             return React.createElement(Text, { text: text });
         },
         hr: function() { return React.createElement(Hr, {}); },
+        table: function(v) {
+            return React.createElement(Table, { values: v });
+        },
 
         //////////////////////////////////////////////////////////////////////
         
@@ -106,7 +125,7 @@ ui = (function() {
             els.push([renderfun, dom_element]);
             ui.update();
         },
-        
+
         update: function() {
             _.each(els, function(el) {
                 ReactDOM.render(el[0](), el[1]);

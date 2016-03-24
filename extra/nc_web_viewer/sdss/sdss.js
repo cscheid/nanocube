@@ -15,6 +15,7 @@ function track_extent(accessor)
 {
     var min, max;
     var all_data = [];
+    var extent = [];
     var result = {
         reset: function() {
             min = Infinity;
@@ -27,10 +28,11 @@ function track_extent(accessor)
             var new_min = new_extent[0], new_max = new_extent[1];
             min = Math.min(new_min, old_min);
             max = Math.max(new_max, old_max);
+            extent = [min, max];
             return ((new_max !== old_max && old_max !== -Infinity) ||
                     (new_min !== old_min && old_min !==  Infinity));
         }, extent: function() {
-            return [min, max];
+            return extent;
         }
     };
     result.reset();
@@ -70,22 +72,51 @@ function track_extent(accessor)
 //     return result;
 // }
 
-function fasterColormap(domain, range)
+function fasterOpacityMap(domain, range)
 {
     var length = range.length - 1, last = range[range.length - 1];
     return function(v) {
         v = Math.min(domain[1], Math.max(domain[0], v));
         var u = (v - domain[0]) / (domain[1] - domain[0]);
         
-        if (u === 1.0) {
-            return { r: last.r, g: last.g, b: last.b, a: last.a };
+        if (u >= 1.0) {
+            return last;
+        } else if (u < 0) {
+            return range[0];
         }
 
         var u_long = u * length;
         var i = ~~(u_long), f = u_long - i;
-        return { r: range[i].r * (1-f) + range[i+1].r * f,
-                 g: range[i].g * (1-f) + range[i+1].g * f,
-                 b: range[i].b * (1-f) + range[i+1].b * f };
+        return range[i] * (1-f) + range[i+1] * f;
+    };
+}
+
+function fasterColormap(domain, range)
+{
+    var length = range.length - 1, last = range[range.length - 1];
+    return function(v, obj) {
+        v = Math.min(domain[1], Math.max(domain[0], v));
+        var u = (v - domain[0]) / (domain[1] - domain[0]);
+        
+        if (u >= 1.0) {
+            obj.r = last.r;
+            obj.g = last.g;
+            obj.b = last.b;
+            obj.a = last.a;
+            return;
+        } else if (u < 0) {
+            obj.r = range[0].r;
+            obj.g = range[0].g;
+            obj.b = range[0].b;
+            obj.a = range[0].a;
+            return;
+        }
+
+        var u_long = u * length;
+        var i = ~~(u_long), f = u_long - i;
+        obj.r = range[i].r * (1-f) + range[i+1].r * f;
+        obj.g = range[i].g * (1-f) + range[i+1].g * f;
+        obj.b = range[i].b * (1-f) + range[i+1].b * f;
     };
 }
 
@@ -93,44 +124,52 @@ function init(config)
 {
     var log = true;
 
-    var colors = colorbrewer.Spectral[9].slice().reverse().map(function(d) {
+    // var colors = colorbrewer.Spectral[9].slice().reverse().map(function(d) {
+    var colors = colorbrewer.YlOrBr[9].slice().reverse().map(function(d) {
         var r = d3.rgb(d);
         r.a = 255;
         return r;
     });
-    var d3_colormap = function() { return { r: 0, g: 0, b: 0, a: 0 }; };
-    var opacityMap = d3.scale.linear()
-            .range([0, 1, 1])
-            .clamp(true);
+    var colorMap = function(v, obj) { obj.r = obj.g = obj.b = obj.a = 0; };
+    var opacityMap = function() { return 1.0; };
     
     function count(v) { return v && v.count; }
+    function total_variance(v) {
+        if (!v) return undefined;
+        var result = 0;
+        for (var i=0; i<v.eig_value.length; ++i)
+            result += v.eig_value[i];
+        return result;
+    };
 
-    var count_extent_tracker = track_extent(count);
-    // var slope_extent_tracker = track_three_sigmas_extent(slope, count);
+    var count_extent_tracker = track_extent(total_variance);
     
-    function colormap(v) {
-        var c = count(v);
-        var cmin = count_extent_tracker.extent()[0], cmax = count_extent_tracker.extent()[1];
+    function colormap(v, obj) {
+        var c = total_variance(v);
+        var count_extent = count_extent_tracker.extent();
+        var cmin = count_extent[0], cmax = count_extent[1];
         var c2 = c;
         if (log) {
             cmin = Math.log(cmin + 1);
             cmax = Math.log(cmax + 1);
             c = Math.log(c + 1);
         }
-        var t = d3_colormap(c2);
-        return { r: +t.r, g: +t.g, b: +t.b, a: opacityMap(c)*255 };
+        colorMap(c2, obj);
+        obj.a = opacityMap(c) * 255;
     }
 
+    var correction = 1;
     function updateColorMap() {
         var cmin = count_extent_tracker.extent()[0];
         var cmax = count_extent_tracker.extent()[1];
+        cmax = cmax * correction + cmin * (1 - correction);
 
-        d3_colormap = fasterColormap([cmin, cmax], colors);
+        colorMap = fasterColormap([cmin, cmax], colors);
         if (log) {
             cmin = Math.log(cmin + 1);
             cmax = Math.log(cmax + 1);
         }
-        opacityMap.domain([cmin, cmin * 2/3 + cmax * 1/3, cmax]);
+        opacityMap = fasterOpacityMap([cmin, cmax], [0, 1, 1, 1]);
     }
 
     var selColor = d3.rgb(255, 128, 0);
@@ -138,9 +177,7 @@ function init(config)
         coarseLevels: 1,
         mapOptions: {
         },
-        valueFunction: function(v) {
-            return v.count;
-        },
+        valueFunction: total_variance,
         processValues: processValues,
         countFunction: count
     };
@@ -174,7 +211,6 @@ function init(config)
                     updateBounds: function(data) {
                         var r = count_extent_tracker.update(data);
                         if (r) {
-                            
                             updateColorMap();
                         }
                         // if (changedCount) {
@@ -199,7 +235,7 @@ function init(config)
     //     element: d3.select("body")
     //         .append("div")
     //         .attr("style", "position: fixed; top: 1em; left: 5em"),
-    //     scale: d3_colormap
+    //     scale: colorMap
     // });
 
     //////////////////////////////////////////////////////////////////////////
@@ -218,13 +254,26 @@ function init(config)
                       ui.text(" Total: "),
                       ui.text(totalCount.total));
     };
-    
-    function highlightCount() {
+
+    var fmt = d3.format(",.3f");
+    function highlightDiv() {
         var caption = "-";
+        var lst = [];
+        var v;
         if (!_.isUndefined(model && model.highlightedValue)) {
-            caption = String(model.highlightedValue.count);
+            v = model.highlightedValue;
+            
+            lst.push(ui.div(null, ui.text("Covariance: ")));
+            var covar = [];
+            for (var i=0; i<10; ++i)
+                covar.push(_.toArray(v.cov_matrix.slice(i*10, i*10+10)).map(fmt));
+            lst.push(ui.div(null, ui.table(covar)));
+            lst.push(ui.div(null, ui.text("Total Variance: " + fmt(total_variance(v)))));
+            lst.push(ui.div(null, ui.text("Count: " + v.count)));
+        } else {
+            lst.push(ui.div(null, ui.text("---")));
         }
-        return ui.div(null, ui.text("Count: " + caption));
+        return ui.group(lst);
     }
     ui.add(function() {
         return ui.group(
@@ -232,7 +281,7 @@ function init(config)
             //            watchers: [function(v) { leg.updateHairLine(slope(v)); }]
             //          }),
             totalCountReactDiv(),
-            highlightCount(),
+            highlightDiv(),
             ui.hr(),
             React.createElement("div", null, ui.checkBox({
                 change: function(state) {
@@ -242,8 +291,7 @@ function init(config)
                         cmin = Math.log(cmin + 1);
                         cmax = Math.log(cmax + 1);
                     }
-                    opacityMap.domain([cmin, cmin * 2/3 + cmax * 1/3, cmax]);
-                    console.log("heatmap redraw");
+                    opacityMap = fasterOpacityMap([cmin, cmax], [0, 1, 1, 1]);
                     heatmap.redraw();
                 }, label: "Log-scale colormap",
                 checked: log
@@ -267,24 +315,35 @@ function init(config)
         );
     }, document.getElementById('react-ui-main'));
 
-    // d3.select("#location")
-    //     .on("keypress", ui.key({
-    //         // Coarsening
-    //         ",": increaseRadius,
-    //         ".": decreaseRadius,
-    //         // Opacities
-    //         "<": decreaseHeatmapOpacity,
-    //         ">": increaseHeatmapOpacity,
-    //         "d": decreaseGeoOpacity,
-    //         "b": increaseGeoOpacity,
-    //         // other
-    //         "g": function() { heatmap.toggleShowCount(); },
-    //         "l": function() {
-    //             log = !log;
-    //             heatmap.redraw();
-    //             ui.update();
-    //         }
-    //     }));
+    d3.select("#location")
+        .on("keypress", ui.key({
+            // Coarsening
+            ",": increaseRadius,
+            ".": decreaseRadius,
+            // Opacities
+            "<": decreaseHeatmapOpacity,
+            ">": increaseHeatmapOpacity,
+            // "d": decreaseGeoOpacity,
+            // "b": increaseGeoOpacity,
+            // other
+            "g": function() { heatmap.toggleShowCount(); },
+            "l": function() {
+                log = !log;
+                updateColorMap();
+                heatmap.redraw();
+                ui.update();
+            }, "]": function() {
+                correction *= 2;
+                updateColorMap();
+                heatmap.redraw();
+                ui.update();
+            }, "[": function() {
+                correction /= 2;
+                updateColorMap();
+                heatmap.redraw();
+                ui.update();
+            }
+        }));
 }
 
 lapack = {

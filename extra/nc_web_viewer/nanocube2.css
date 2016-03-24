@@ -43,6 +43,10 @@ img.leaflet-tile {
     -webkit-filter: saturate(20%) invert(100%) brightness(50%);
 }
 
+td.ui {
+    text-align: right;
+}
+
 #total {
     position: fixed;
     top: 1em;

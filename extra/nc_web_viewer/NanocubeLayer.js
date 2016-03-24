@@ -98,6 +98,7 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
     var ctx = canvas.getContext('2d');
     var coarse = this.coarselevels;
     var that = this;
+    console.log("renderTile", tilePoint);
     canvas.onmousemove = function(event) {
         var pixelX =        event.offsetX  >> coarse,
             pixelY = (255 - event.offsetY) >> coarse;
@@ -124,7 +125,7 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
         }
     };
 
-    if (data == null){
+    if (data == null || data.length === 0){
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (this.show_count){//draw grid box
             this.drawGridCount(ctx,tilePoint,zoom,data);
@@ -142,14 +143,16 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
         ctx.mozImageSmoothingEnabled = false;
     }
 
+    // The API for a nanocubeLayer colormap is now no longer very
+    // nice: we pass in a color object and expect the caller to assign
+    // to the fields RGBA in the range of 0 to 255.
+    // 
+    // This is not the nicest API, but we want to avoid pressure on
+    // the garbage collection through object creation. The loop that
+    // follows is on a hot path, as determined by profiling the code.
+    var color = { r: 0, g: 0, b: 0, a: 0 };
     for (var i=0; i < data.length; ++i) {
-        var color = that.mapOptions.colormap(data[i].v);
-        if (!color)
-            return;
-        if (_.isString(color)) {
-            color = d3.rgb(color);
-            color.a = 255;
-        }
+        that.mapOptions.colormap(data[i].v, color);
         var idx = (imgData.height-1-data[i].y)*imgData.width + data[i].x;
         pixels[idx*4]=color.r;
         pixels[idx*4+1]=color.g;
@@ -221,6 +224,8 @@ L.NanocubeLayer.prototype.processJSON = function(json) {
 
 
 L.NanocubeLayer.prototype._addTilesFromCenterOut = function (bounds) {
+    console.log("reset!");
     this.mapOptions.resetBounds();
+    debugger;
     L.TileLayer.Canvas.prototype._addTilesFromCenterOut.call(this, bounds);
 };

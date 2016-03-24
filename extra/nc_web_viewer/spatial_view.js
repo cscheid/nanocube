@@ -55,7 +55,6 @@ var spatial_view = function(opts)
     
     model = opts.model;
     opts.model.on("queryChanged", function() {
-        debugger;
         heatMap && heatMap.redraw();
     });
 
