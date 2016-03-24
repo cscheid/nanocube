@@ -98,7 +98,6 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
     var ctx = canvas.getContext('2d');
     var coarse = this.coarselevels;
     var that = this;
-    console.log("renderTile", tilePoint);
     canvas.onmousemove = function(event) {
         var pixelX =        event.offsetX  >> coarse,
             pixelY = (255 - event.offsetY) >> coarse;
@@ -224,8 +223,6 @@ L.NanocubeLayer.prototype.processJSON = function(json) {
 
 
 L.NanocubeLayer.prototype._addTilesFromCenterOut = function (bounds) {
-    console.log("reset!");
     this.mapOptions.resetBounds();
-    debugger;
     L.TileLayer.Canvas.prototype._addTilesFromCenterOut.call(this, bounds);
 };

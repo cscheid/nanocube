@@ -8,7 +8,7 @@ function processValues(v) {
     if (v.val.count !== void 0) {
         return;
     }
-    v.val = CalculatePCA(v.val);
+    v.val = Fitting.Averages(v.val);
 };
 
 function track_extent(accessor)
@@ -39,38 +39,33 @@ function track_extent(accessor)
     return result;
 }
 
-// function track_three_sigmas_extent(accessor, weight_accessor)
-// {
-//     var count = 0, sum_x = 0, sum_xx = 0;
-//     var result = {
-//         reset: function() {
-//             count = sum_x = sum_xx = 0;
-//         }, update: function(d) {
-//             var lst = _.sortBy(d, function(d) {
-//                 return accessor(d.v);
-//             });
-//             // console.log("slope: ", lst[0].v.parameters[0], "count: ", lst[0].v.count, lst[0].v);
-//             // console.log("slope: ", lst[lst.length-1].v.parameters[0], "count: ", lst[lst.length-1].v.count, lst[lst.length-1].v);
-//             count  += d3.sum(d.map(function(d) {
-//                 return weight_accessor(d.v);
-//             }));
-//             sum_x  += d3.sum(d.map(function(d) {
-//                 return accessor(d.v) * weight_accessor(d.v);
-//             }));
-//             sum_xx += d3.sum(d.map(function(d) { return Math.pow(accessor(d.v), 2) * weight_accessor(d.v); }));
-//             return true;
-//         }, extent: function() {
-//             if (count === 0) {
-//                 return [-Infinity, Infinity];
-//             }
-//             var avg = sum_x / count;
-//             var variance = sum_xx / count - avg * avg, stdev = Math.sqrt(variance);
-//             return [avg - 3 * stdev, avg + 3 * stdev];
-//         }
-//     };
-//     result.reset();
-//     return result;
-// }
+function track_three_sigmas_extent(accessor, weight_accessor)
+{
+    var count = 0, sum_x = 0, sum_xx = 0;
+    var extent = [-1, 1];
+    var result = {
+        reset: function() {
+            count = sum_x = sum_xx = 0;
+        }, update: function(d) {
+            debugger;
+            count  += d3.sum(d.map(function(d) {
+                return weight_accessor(d.v);
+            }));
+            sum_x  += d3.sum(d.map(function(d) {
+                return accessor(d.v) * weight_accessor(d.v);
+            }));
+            sum_xx += d3.sum(d.map(function(d) { return Math.pow(accessor(d.v), 2) * weight_accessor(d.v); }));
+            var avg = sum_x / count;
+            var variance = sum_xx / count - avg * avg, stdev = Math.sqrt(variance);
+            extent = [avg - 3 * stdev, avg + 3 * stdev];
+            return true;
+        }, extent: function() {
+            return extent;
+        }
+    };
+    result.reset();
+    return result;
+}
 
 function fasterOpacityMap(domain, range)
 {
@@ -103,20 +98,18 @@ function fasterColormap(domain, range)
             obj.g = last.g;
             obj.b = last.b;
             obj.a = last.a;
-            return;
         } else if (u < 0) {
             obj.r = range[0].r;
             obj.g = range[0].g;
             obj.b = range[0].b;
             obj.a = range[0].a;
-            return;
+        } else {
+            var u_long = u * length;
+            var i = ~~(u_long), f = u_long - i;
+            obj.r = range[i].r * (1-f) + range[i+1].r * f;
+            obj.g = range[i].g * (1-f) + range[i+1].g * f;
+            obj.b = range[i].b * (1-f) + range[i+1].b * f;
         }
-
-        var u_long = u * length;
-        var i = ~~(u_long), f = u_long - i;
-        obj.r = range[i].r * (1-f) + range[i+1].r * f;
-        obj.g = range[i].g * (1-f) + range[i+1].g * f;
-        obj.b = range[i].b * (1-f) + range[i+1].b * f;
     };
 }
 
@@ -124,8 +117,10 @@ function init(config)
 {
     var log = true;
 
+    var colors = [d3.hcl(-100,70,60), d3.hcl(0,0,40), d3.hcl(50,70,60)].map(function(d) {
+    // var colors = colorbrewer.RdBu[3].slice().map(function(d) {
     // var colors = colorbrewer.Spectral[9].slice().reverse().map(function(d) {
-    var colors = colorbrewer.YlOrBr[9].slice().reverse().map(function(d) {
+    // var colors = colorbrewer.YlOrBr[9].slice().reverse().map(function(d) {
         var r = d3.rgb(d);
         r.a = 255;
         return r;
@@ -141,35 +136,52 @@ function init(config)
             result += v.eig_value[i];
         return result;
     };
+    var which_variable = 0;
+    function average(v) {
+        if (!v) return undefined;
+        if (which_variable % 2) {
+            return v.mean[1] - v.mean[2];
+        } else {
+            return v.mean[3] - v.mean[4];
+        }
+        // return v.mean[which_variable];
+    }
+ 
+    // function average(v) {
+    //     return v &&
+    // };
 
-    var count_extent_tracker = track_extent(total_variance);
+    var extent_tracker = track_three_sigmas_extent(average, count);
+    var count_extent_tracker = track_extent(count);
     
     function colormap(v, obj) {
-        var c = total_variance(v);
-        var count_extent = count_extent_tracker.extent();
-        var cmin = count_extent[0], cmax = count_extent[1];
-        var c2 = c;
+        debugger;
+        var c = average(v);
+        colorMap(c, obj);
+
+        var c2 = count(v);
         if (log) {
-            cmin = Math.log(cmin + 1);
-            cmax = Math.log(cmax + 1);
-            c = Math.log(c + 1);
+            c2 = Math.log(c2 + 1);
         }
-        colorMap(c2, obj);
-        obj.a = opacityMap(c) * 255;
+        obj.a = opacityMap(c2) * 255;
     }
 
     var correction = 1;
     function updateColorMap() {
-        var cmin = count_extent_tracker.extent()[0];
-        var cmax = count_extent_tracker.extent()[1];
+        var cmin = extent_tracker.extent()[0];
+        var cmax = extent_tracker.extent()[1];
         cmax = cmax * correction + cmin * (1 - correction);
-
         colorMap = fasterColormap([cmin, cmax], colors);
+        
         if (log) {
+            cmin = count_extent_tracker.extent()[0];
+            cmax = count_extent_tracker.extent()[1];
             cmin = Math.log(cmin + 1);
             cmax = Math.log(cmax + 1);
+            opacityMap = fasterOpacityMap([cmin, cmax], [0, 1, 1, 1]);
+        } else {
+            opacityMap = fasterOpacityMap(count_extent_tracker.extent(), [0, 1, 1, 1]);
         }
-        opacityMap = fasterOpacityMap([cmin, cmax], [0, 1, 1, 1]);
     }
 
     var selColor = d3.rgb(255, 128, 0);
@@ -177,7 +189,7 @@ function init(config)
         coarseLevels: 1,
         mapOptions: {
         },
-        valueFunction: total_variance,
+        valueFunction: average, // total_variance,
         processValues: processValues,
         countFunction: count
     };
@@ -206,10 +218,12 @@ function init(config)
                 mapOptions: {
                     colormap: colormap,
                     resetBounds: function() {
-                        return count_extent_tracker.reset();
+                        return extent_tracker.reset();
                     },
                     updateBounds: function(data) {
-                        var r = count_extent_tracker.update(data);
+                        var v1 = count_extent_tracker.update(data);
+                        var v2 = extent_tracker.update(data);
+                        var r = v1 || v2;
                         if (r) {
                             updateColorMap();
                         }
@@ -256,7 +270,8 @@ function init(config)
     };
 
     var fmt = d3.format(",.3f");
-    function highlightDiv() {
+    
+    function highlightCovarianceDiv() {
         var caption = "-";
         var lst = [];
         var v;
@@ -275,13 +290,23 @@ function init(config)
         }
         return ui.group(lst);
     }
+
+    function highlightAverageDiv() {
+        if (!_.isUndefined(model && model.highlightedValue)) {
+            var v = model.highlightedValue;
+            return ui.div(null, ui.text("Average: " + String(average(v))));
+        } else {
+            return ui.div(null, ui.text("Average: ---"));
+        }
+    }
+    
     ui.add(function() {
         return ui.group(
             // ui.state({ state: model && model.highlightedValue,
             //            watchers: [function(v) { leg.updateHairLine(slope(v)); }]
             //          }),
             totalCountReactDiv(),
-            highlightDiv(),
+            highlightAverageDiv(),
             ui.hr(),
             React.createElement("div", null, ui.checkBox({
                 change: function(state) {
@@ -333,13 +358,13 @@ function init(config)
                 heatmap.redraw();
                 ui.update();
             }, "]": function() {
-                correction *= 2;
-                updateColorMap();
+                which_variable = (which_variable + 1) % 10;
+                extent_tracker.reset();
                 heatmap.redraw();
                 ui.update();
             }, "[": function() {
-                correction /= 2;
-                updateColorMap();
+                which_variable = (which_variable + 9) % 10;
+                extent_tracker.reset();
                 heatmap.redraw();
                 ui.update();
             }
@@ -389,53 +414,6 @@ lapack = {
         };
     })()
 };
-
-// function setupEmlapack() {
-//     var dsyev = emlapack.cwrap('dsyev_', null, ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number']),
-//         n = 5,
-//         pjobz = emlapack._malloc(1),
-//         puplo = emlapack._malloc(1),
-//         pn = emlapack._malloc(4),
-//         pa = emlapack._malloc(n * n * 8),
-//         plda = emlapack._malloc(4),
-//         pw = emlapack._malloc(n * 8),
-//         plwork = emlapack._malloc(4),
-//         pinfo = emlapack._malloc(4),
-//         pworkopt = emlapack._malloc(4);
-
-//     debugger;
-    
-//     emlapack.setValue(pjobz, 'V'.charCodeAt(0), 'i8');
-//     emlapack.setValue(puplo, 'L'.charCodeAt(0), 'i8');
-//     emlapack.setValue(pn,      n, 'i32');
-//     emlapack.setValue(plda,    n, 'i32');
-//     emlapack.setValue(plwork, -1, 'i32');
-
-//     var a = new Float64Array(emlapack.HEAPF64.buffer, pa, n * n);
-//     var w = new Float64Array(emlapack.HEAPF64.buffer, pw, n);
-
-//     // a.set([ 1.96,    0,     0,   0, 0,
-//     //        -6.49,  3.8,     0,   0, 0,
-//     //        -0.47, -6.39, 4.17,   0, 0,
-//     //        -7.2,   1.5, -1.51, 5.7, 0,
-//     //        -0.65, -6.34, 2.67, 1.8, -7.1]);
-
-//     a.set([ 1, 0.5, 0, 0, 0,
-//             0,   1, 0, 0, 0,
-//             0,   0, 0, 0, 0,
-//             0,   0, 0, 0, 0,
-//             0,   0, 0, 0, 0]);
-
-//     dsyev(pjobz, puplo, pn, pa, plda, pw, pworkopt, plwork, pinfo);
-
-//     var workopt = emlapack.getValue(pworkopt, 'double'),
-//         pwork   = emlapack._malloc(workopt * 8);
-//     emlapack.setValue(plwork, workopt, 'i32');
-
-//     dsyev(pjobz, puplo, pn, pa, plda, pw, pwork, plwork, pinfo);
-
-//     console.log(w);
-// }
 
 // screw you, browserify, we're going to write into the global object.
 
