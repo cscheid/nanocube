@@ -45,24 +45,30 @@ function CalculatePCA(vec) {
     //     covMat[i] = new Float64Array(d);
     // }
 
-    // build the upper triangular area
     var count = vec[s.count];
-    if(count == 1) {
-        return {'cov_matrix': null,
-                'eig_value': null,
-                'eig_vector':null,
-                'count': 1};
-    } else {
-        for(row = 0; row < d; row ++) {
-            for(col = row; col < d; col ++) {
-                var ix = row + d * col;
-                var sum_x = vec[row_lookup[row]];
-                var sum_y = vec[col_lookup[col]];
-                var sum_xy = vec[cell_lookup[ix]];
-                covMat[ix] = (sum_xy-sum_x*sum_y/count)/(count-1);
-            }
+    // build the upper triangular area
+    // if(count == 1) {
+    //     return {'cov_matrix': null,
+    //             'eig_value': null,
+    //             'eig_vector':null,
+    //             'count': 1};
+    // } else {
+    for(row = 0; row < d; row ++) {
+        for(col = row; col < d; col ++) {
+            var ix = row + d * col;
+            var sum_x = vec[row_lookup[row]];
+            var sum_y = vec[col_lookup[col]];
+            var sum_xy = vec[cell_lookup[ix]];
+            covMat[ix] = (sum_xy-sum_x*sum_y/count)/(count);
+            // covMat[ix] = (sum_xy-sum_x*sum_y/count)/(count-1);
+            
+            // E[(x - ux)(y - uy)] = E[xy - x uy - y ux + ux uy]
+            //  = E[xy] - uy E[x] - ux E[y] + E[x]E[y]
+            //  = E[xy] - 2E[x]E[y] + E[x][y]
+            //  = E[xy] - E[x]E[y]
         }
     }
+    // }
 
     // fill the lower triangular area
     for(row = 1; row < d; row ++) {
@@ -71,13 +77,13 @@ function CalculatePCA(vec) {
         }
     }
 
-    // if count < dimensions, PCA won't work
-    if(vec[s.count] < d) {
-        return {'cov_matrix': covMat,
-                'eig_value': null,
-                'eig_vector':null,
-                'count': vec[s.count]};
-    }
+    // // if count < dimensions, PCA won't work
+    // if(vec[s.count] < d) {
+    //     return {'cov_matrix': covMat,
+    //             'eig_value': null,
+    //             'eig_vector':null,
+    //             'count': vec[s.count]};
+    // }
 
     // calculate eigen value and eigen vector
     var eig = lapack.dsyev('V', 'L', covMat);
