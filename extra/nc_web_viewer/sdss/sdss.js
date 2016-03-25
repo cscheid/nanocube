@@ -393,6 +393,7 @@ function init(config)
         model.on("resultsChanged", ui.update);
         model.on("highlightChanged", ui.update);
         model.on("clickChanged", function(){
+<<<<<<< 4ae04acb04e649645e257fadcf06fd2cdae96a94
             if(showSimilar){
                 anchorVal = model.clickedValue;
                 heatmap.mapOptions = {
@@ -412,6 +413,9 @@ function init(config)
                 }
                 heatmap.redraw();
             }
+=======
+            console.log("Works!", model.clickedValue);
+>>>>>>> add clickValue event
         });
     });
 
