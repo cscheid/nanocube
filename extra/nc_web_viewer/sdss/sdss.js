@@ -156,11 +156,21 @@ function init(config)
     // function average(v) {
     //     return v &&
     // };
+    var compared_value = undefined;
+    function similarity(v) {
+        var s = 0;
+        for(var i = 0; i < 10; i ++) {
+            s += v.mean[i]-compared_value.mean[i];
+        }
+        return s;
+    }
 
-    var extent_tracker = track_three_sigmas_extent(average, weight);
     var weight_extent_tracker = track_extent(weight);
 
     var correction = 0.6;
+    var extent_tracker = track_three_sigmas_extent(average, count);
+    var count_extent_tracker = track_extent(count);
+    var similarity_extent_tracker = track_extent(similarity);
     
     function colormap(v, obj) {
         var c = average(v);
@@ -194,6 +204,48 @@ function init(config)
 
 
         leg.redraw();
+    }
+
+    function similarityColormap(v, obj) {
+        var c = similarity(v);
+        colorMap(c, obj);
+
+        var c2 = count(v);
+        if (log) {
+            c2 = Math.log(c2 + 1);
+        }
+        obj.a = opacityMap(c2) * 255;
+    }
+
+    var similarityRange = 5;
+    function updateSimilarityColorMap() {
+        //var cmin = similarity_extent_tracker.extent()[0];
+        //var cmax = similarity_extent_tracker.extent()[1];
+        //cmax = cmax * correction + cmin * (1 - correction);
+        //colorMap = fasterColormap([cmin, cmax], colors);
+        var similarColor = d3.rgb('#b2182b');
+        var differentColor = d3.rgb('#999999');
+        colorMap = function(c, obj) {
+            if( c > -similarityRange && c < similarityRange) {
+                obj.r = similarColor.r;
+                obj.g = similarColor.g;
+                obj.b = similarColor.b;
+            } else {
+                obj.r = differentColor.r;
+                obj.g = differentColor.g;
+                obj.b = differentColor.b;
+            }
+        };
+        
+        if (log) {
+            cmin = count_extent_tracker.extent()[0];
+            cmax = count_extent_tracker.extent()[1];
+            cmin = Math.log(cmin + 1);
+            cmax = Math.log(cmax + 1);
+            opacityMap = fasterOpacityMap([cmin, cmax], [0, 1, 1, 1]);
+        } else {
+            opacityMap = fasterOpacityMap(count_extent_tracker.extent(), [0, 1, 1, 1]);
+        }
     }
 
     var selColor = d3.rgb(255, 128, 0);
@@ -254,7 +306,23 @@ function init(config)
         model.on("resultsChanged", ui.update);
         model.on("highlightChanged", ui.update);
         model.on("clickChanged", function(){
-            console.log("Works!", model.clickedValue);
+            compared_value = model.clickedValue;
+            heatmap.mapOptions = {
+                colormap: similarityColormap,
+                resetBounds: function() {
+                    return similarity_extent_tracker.reset();
+                },
+                updateBounds: function(data) {
+                    var v1 = count_extent_tracker.update(data);
+                    var v2 = similarity_extent_tracker.update(data);
+                    var r = v1 || v2;
+                    if (r) {
+                        updateSimilarityColorMap();
+                    }
+                    return r;
+                }
+            }
+            heatmap.redraw();
         });
     });
 
