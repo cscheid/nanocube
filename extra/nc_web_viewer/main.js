@@ -87,7 +87,7 @@ function init(config)
     var count_extent_tracker = track_extent(count);
     var slope_extent_tracker = track_three_sigmas_extent(slope, count);
     
-    function colormap(v) {
+    function colormap(v, obj) {
         var s = slope(v), c = count(v);
         var cmin = count_extent_tracker.extent()[0], cmax = count_extent_tracker.extent()[1];
         if (log) {
@@ -97,7 +97,11 @@ function init(config)
         }
         opacityMap.domain([cmin, cmin * 2/3 + cmax * 1/3, cmax]);
         var t = d3.rgb(d3_colormap(s));
-        return { r: +t.r, g: +t.g, b: +t.b, a: opacityMap(c)*255 };
+        var result = { r: +t.r, g: +t.g, b: +t.b, a: opacityMap(c)*255 };
+        obj.r = result.r;
+        obj.g = result.g;
+        obj.b = result.b;
+        obj.a = result.a;
     }
 
     function updateSlopeColorMap(tracker) {
@@ -112,8 +116,6 @@ function init(config)
     var selColor = d3.rgb(255, 128, 0);
     var modelOptions = {
         coarseLevels: 1,
-        mapOptions: {
-        },
         valueFunction: function(v) {
             return v.parameters[0];
         },
@@ -137,6 +139,9 @@ function init(config)
             model: model,
             processValues: modelOptions.processValues,
             selectionColor: selColor,
+            geoMap: {
+                opacity: 1.0
+            },
             nanocubeLayer: {
                 coarseLevels: 4,
                 opacity: 1.0,

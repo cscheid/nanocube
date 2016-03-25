@@ -61,7 +61,9 @@ function ColorLegend(opts)
         if (_.isUndefined(v)) {
             this.hairLine.attr("display", "none");
         } else {
-            var x = this.colorPreScale.invert(xScale(v));
+            var d = opts.scale.domain();
+            this.axisScale.domain([d[0], d[d.length-1]]);
+            var x = this.axisScale(v);
             this.hairLine.attr("display", null).attr("x1", x).attr("x2", x);
         }
     };

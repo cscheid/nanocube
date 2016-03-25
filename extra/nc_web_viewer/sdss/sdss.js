@@ -117,17 +117,23 @@ function init(config)
 {
     var log = true;
 
-    var colors = [d3.hcl(-100,70,60), d3.hcl(0,0,40), d3.hcl(50,70,60)].map(function(d) {
+    // var colors = [d3.hcl(-100,70,60), d3.hcl(0,0,40), d3.hcl(50,70,60)].map(function(d) {
     // var colors = colorbrewer.RdBu[3].slice().map(function(d) {
-    // var colors = colorbrewer.Spectral[9].slice().reverse().map(function(d) {
+    var colors = colorbrewer.Spectral[9].slice().reverse().map(function(d) {
     // var colors = colorbrewer.YlOrBr[9].slice().reverse().map(function(d) {
         var r = d3.rgb(d);
         r.a = 255;
         return r;
     });
     var colorMap = function(v, obj) { obj.r = obj.g = obj.b = obj.a = 0; };
+    var d3_colormap = d3.scale.linear().range(colorbrewer.Spectral[9].slice().reverse());
     var opacityMap = function() { return 1.0; };
     
+    function weight(v) {
+        if (!v) return undefined;
+        return v.count / d3.mean(v.mean.slice(6,10)); // .map(function(d) { return 
+        // return v && v.count;
+    }
     function count(v) { return v && v.count; }
     function total_variance(v) {
         if (!v) return undefined;
@@ -139,49 +145,55 @@ function init(config)
     var which_variable = 0;
     function average(v) {
         if (!v) return undefined;
-        if (which_variable % 2) {
-            return v.mean[1] - v.mean[2];
-        } else {
-            return v.mean[3] - v.mean[4];
-        }
-        // return v.mean[which_variable];
+        // if (which_variable % 2) {
+        //     return v.mean[1] - v.mean[2];
+        // } else {
+        //     return v.mean[3] - v.mean[4];
+        // }
+        return v.mean[which_variable];
     }
  
     // function average(v) {
     //     return v &&
     // };
 
-    var extent_tracker = track_three_sigmas_extent(average, count);
-    var count_extent_tracker = track_extent(count);
+    var extent_tracker = track_three_sigmas_extent(average, weight);
+    var weight_extent_tracker = track_extent(weight);
+
+    var correction = 0.6;
     
     function colormap(v, obj) {
-        debugger;
         var c = average(v);
         colorMap(c, obj);
 
-        var c2 = count(v);
+        var c2 = weight(v);
         if (log) {
-            c2 = Math.log(c2 + 1);
+            c2 = Math.pow(c2, 0.333 * correction); // log(c2 + 1);
         }
         obj.a = opacityMap(c2) * 255;
     }
 
-    var correction = 1;
     function updateColorMap() {
         var cmin = extent_tracker.extent()[0];
         var cmax = extent_tracker.extent()[1];
-        cmax = cmax * correction + cmin * (1 - correction);
+        // cmax = cmax * correction + cmin * (1 - correction);
         colorMap = fasterColormap([cmin, cmax], colors);
+        d3_colormap.domain(d3.range(colors.length).map(function(d) {
+            return (d / (colors.length - 1)) * (cmax - cmin) + cmin;
+        }));
         
         if (log) {
-            cmin = count_extent_tracker.extent()[0];
-            cmax = count_extent_tracker.extent()[1];
-            cmin = Math.log(cmin + 1);
-            cmax = Math.log(cmax + 1);
-            opacityMap = fasterOpacityMap([cmin, cmax], [0, 1, 1, 1]);
+            cmin = weight_extent_tracker.extent()[0];
+            cmax = weight_extent_tracker.extent()[1];
+            cmin = cmin = Math.pow(cmin, 0.333 * correction); // log(cmin + 1);
+            cmax = cmax = Math.log(cmax, 0.333 * correction); // log(cmax + 1);
+            opacityMap = fasterOpacityMap([cmin, cmax], [0, 1]);
         } else {
-            opacityMap = fasterOpacityMap(count_extent_tracker.extent(), [0, 1, 1, 1]);
+            opacityMap = fasterOpacityMap(weight_extent_tracker.extent(), [0, 1, 1, 1]);
         }
+
+
+        leg.redraw();
     }
 
     var selColor = d3.rgb(255, 128, 0);
@@ -221,7 +233,7 @@ function init(config)
                         return extent_tracker.reset();
                     },
                     updateBounds: function(data) {
-                        var v1 = count_extent_tracker.update(data);
+                        var v1 = weight_extent_tracker.update(data);
                         var v2 = extent_tracker.update(data);
                         var r = v1 || v2;
                         if (r) {
@@ -245,12 +257,12 @@ function init(config)
 
     //////////////////////////////////////////////////////////////////////////
     
-    // var leg = new ColorLegend({
-    //     element: d3.select("body")
-    //         .append("div")
-    //         .attr("style", "position: fixed; top: 1em; left: 5em"),
-    //     scale: colorMap
-    // });
+    var leg = new ColorLegend({
+        element: d3.select("body")
+            .append("div")
+            .attr("style", "position: fixed; top: 1em; left: 5em"),
+        scale: d3_colormap
+    });
 
     //////////////////////////////////////////////////////////////////////////
     // React UI
@@ -277,7 +289,6 @@ function init(config)
         var v;
         if (!_.isUndefined(model && model.highlightedValue)) {
             v = model.highlightedValue;
-            
             lst.push(ui.div(null, ui.text("Covariance: ")));
             var covar = [];
             for (var i=0; i<10; ++i)
@@ -290,33 +301,35 @@ function init(config)
         }
         return ui.group(lst);
     }
-
+    
     function highlightAverageDiv() {
         if (!_.isUndefined(model && model.highlightedValue)) {
             var v = model.highlightedValue;
-            return ui.div(null, ui.text("Average: " + String(average(v))));
+            return ui.group(
+                ui.div(null, ui.text("Variable: " + String(which_variable))),
+                ui.div(null, ui.text("Average: " + String(average(v)))),
+                ui.div(null, ui.text("Count: " + String(count(v)))),
+                ui.div(null, ui.text("Weight: " + String(weight(v))))
+            );
         } else {
-            return ui.div(null, ui.text("Average: ---"));
+            return ui.group(
+                ui.div(null, ui.text("---"))
+            );
         }
     }
     
     ui.add(function() {
         return ui.group(
-            // ui.state({ state: model && model.highlightedValue,
-            //            watchers: [function(v) { leg.updateHairLine(slope(v)); }]
-            //          }),
+            ui.state({ state: model && model.highlightedValue,
+                       watchers: [function(v) { leg.updateHairLine(average(v)); }]
+                     }),
             totalCountReactDiv(),
             highlightAverageDiv(),
             ui.hr(),
             React.createElement("div", null, ui.checkBox({
                 change: function(state) {
                     log = state;
-                    var cmin = count_extent_tracker.extent()[0], cmax = count_extent_tracker.extent()[1];
-                    if (log) {
-                        cmin = Math.log(cmin + 1);
-                        cmax = Math.log(cmax + 1);
-                    }
-                    opacityMap = fasterOpacityMap([cmin, cmax], [0, 1, 1, 1]);
+                    updateColorMap();
                     heatmap.redraw();
                 }, label: "Log-scale colormap",
                 checked: log
@@ -365,6 +378,16 @@ function init(config)
             }, "[": function() {
                 which_variable = (which_variable + 9) % 10;
                 extent_tracker.reset();
+                heatmap.redraw();
+                ui.update();
+            }, "}": function() {
+                correction *= 1.25;
+                updateColorMap();
+                heatmap.redraw();
+                ui.update();
+            }, "{": function() {
+                correction /= 1.25;
+                updateColorMap();
                 heatmap.redraw();
                 ui.update();
             }
@@ -424,7 +447,8 @@ window.main = function() {
     //                                      0,   0, 0, 0, 0,
     //                                      0,   0, 0, 0, 0,
     //                                      0,   0, 0, 0, 0]));
-    d3.json("config_sdss_types.json", function(error, data) {
+    // d3.json("config_sdss_types.json", function(error, data) {
+    d3.json("config_sdss.json", function(error, data) {
         init(data);
     });
 };
