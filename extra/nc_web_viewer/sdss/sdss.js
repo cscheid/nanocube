@@ -342,6 +342,16 @@ function init(config)
     function decreaseRadius() { sp_view.radius(sp_view.radius() - 1); };
     function increaseHeatmapOpacity() { sp_view.heatMapOpacity(sp_view.heatMapOpacity() + 0.1); }
     function decreaseHeatmapOpacity() { sp_view.heatMapOpacity(sp_view.heatMapOpacity() - 0.1); }
+    function increaseSimilarityMeasure() { 
+        similarityRange *= 1.2; 
+        heatmap.redraw(); 
+        ui.update();
+    }
+    function decreaseSimilarityMeasure() { 
+        similarityRange *= 0.8; 
+        heatmap.redraw(); 
+        ui.update();
+    }
 
     function totalCountReactDiv() {
         var totalCount = (model && model.totalCount()) || {
@@ -412,6 +422,11 @@ function init(config)
                 }, label: "Show heatmap grid"
             })),
             ui.incDecButtons({
+                increase: increaseSimilarityMeasure,
+                decrease: decreaseSimilarityMeasure,
+                label: "Similarity Measure"
+            }),
+            ui.incDecButtons({
                 increase: decreaseRadius,
                 decrease: increaseRadius,
                 label: "Heatmap resolution"
@@ -460,6 +475,38 @@ function init(config)
                 correction /= 1.25;
                 updateColorMap();
                 heatmap.redraw();
+            },
+            "q": function(){
+                heatmap.mapOptions = {
+                    colormap: colormap,
+                    resetBounds: function() {
+                        return extent_tracker.reset();
+                    },
+                    updateBounds: function(data) {
+                        var v1 = count_extent_tracker.update(data);
+                        var v2 = extent_tracker.update(data);
+                        var r = v1 || v2;
+                        if (r) {
+                            updateColorMap();
+                        }
+                        // if (changedCount) {
+                        //     updateSlopeColorMap(slope_extent_tracker);
+                        //     leg.redraw();
+                        // }
+                        return r;
+                    }
+                }
+                heatmap.redraw();
+                ui.update();
+            },
+            "p": function() {
+                similarityRange *= 1.2; 
+                heatmap.redraw(); 
+                ui.update();
+            },
+            "o": function() {
+                similarityRange *= 0.8;
+                heatmap.redraw(); 
                 ui.update();
             }
         }));
