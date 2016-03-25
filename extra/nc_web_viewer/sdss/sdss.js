@@ -238,14 +238,17 @@ function init(config)
         };
         
         if (log) {
-            cmin = count_extent_tracker.extent()[0];
-            cmax = count_extent_tracker.extent()[1];
-            cmin = Math.log(cmin + 1);
-            cmax = Math.log(cmax + 1);
-            opacityMap = fasterOpacityMap([cmin, cmax], [0, 1, 1, 1]);
+            cmin = weight_extent_tracker.extent()[0];
+            cmax = weight_extent_tracker.extent()[1];
+            cmin = cmin = Math.pow(cmin, 0.333 * correction); // log(cmin + 1);
+            cmax = cmax = Math.log(cmax, 0.333 * correction); // log(cmax + 1);
+            opacityMap = fasterOpacityMap([cmin, cmax], [0, 1]);
         } else {
-            opacityMap = fasterOpacityMap(count_extent_tracker.extent(), [0, 1, 1, 1]);
+            opacityMap = fasterOpacityMap(weight_extent_tracker.extent(), [0, 1, 1, 1]);
         }
+
+
+        leg.redraw();
     }
 
     var selColor = d3.rgb(255, 128, 0);
@@ -313,7 +316,7 @@ function init(config)
                     return similarity_extent_tracker.reset();
                 },
                 updateBounds: function(data) {
-                    var v1 = count_extent_tracker.update(data);
+                    var v1 = weight_extent_tracker.update(data);
                     var v2 = similarity_extent_tracker.update(data);
                     var r = v1 || v2;
                     if (r) {
@@ -483,7 +486,7 @@ function init(config)
                         return extent_tracker.reset();
                     },
                     updateBounds: function(data) {
-                        var v1 = count_extent_tracker.update(data);
+                        var v1 = weight_extent_tracker.update(data);
                         var v2 = extent_tracker.update(data);
                         var r = v1 || v2;
                         if (r) {
