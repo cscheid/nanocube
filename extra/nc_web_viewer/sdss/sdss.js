@@ -157,10 +157,11 @@ function init(config)
     //     return v &&
     // };
     var compared_value = undefined;
+    var compared_index = [0,1,2,3,4]; // index in mean
     function similarity(v) {
         var s = 0;
-        for(var i = 0; i < 10; i ++) {
-            s += v.mean[i]-compared_value.mean[i];
+        for(var i = 0; i < compared_index.length; i ++) {
+            s += v.mean[compared_index[i]]-compared_value.mean[compared_index[i]];
         }
         return s;
     }
@@ -276,6 +277,7 @@ function init(config)
             model: model,
             processValues: modelOptions.processValues,
             selectionColor: selColor,
+            showSimilar: false,
             nanocubeLayer: {
                 coarseLevels: 4,
                 opacity: 1.0,
@@ -309,23 +311,25 @@ function init(config)
         model.on("resultsChanged", ui.update);
         model.on("highlightChanged", ui.update);
         model.on("clickChanged", function(){
-            compared_value = model.clickedValue;
-            heatmap.mapOptions = {
-                colormap: similarityColormap,
-                resetBounds: function() {
-                    return similarity_extent_tracker.reset();
-                },
-                updateBounds: function(data) {
-                    var v1 = weight_extent_tracker.update(data);
-                    var v2 = similarity_extent_tracker.update(data);
-                    var r = v1 || v2;
-                    if (r) {
-                        updateSimilarityColorMap();
+            if(heatmap.showSimilar){
+                compared_value = model.clickedValue;
+                heatmap.mapOptions = {
+                    colormap: similarityColormap,
+                    resetBounds: function() {
+                        return similarity_extent_tracker.reset();
+                    },
+                    updateBounds: function(data) {
+                        var v1 = weight_extent_tracker.update(data);
+                        var v2 = similarity_extent_tracker.update(data);
+                        var r = v1 || v2;
+                        if (r) {
+                            updateSimilarityColorMap();
+                        }
+                        return r;
                     }
-                    return r;
                 }
+                heatmap.redraw();
             }
-            heatmap.redraw();
         });
     });
 
@@ -424,11 +428,19 @@ function init(config)
                     heatmap.toggleShowCount();
                 }, label: "Show heatmap grid"
             })),
+            ui.hr(),
+            React.createElement("div", null, ui.checkBox({
+                change: function(evt) {
+                    heatmap.showSimilar = !heatmap.showSimilar;
+                    console.log(heatmap.showSimilar);
+                }, label: "Click to Select"
+            })),
             ui.incDecButtons({
                 increase: increaseSimilarityMeasure,
                 decrease: decreaseSimilarityMeasure,
                 label: "Similarity Measure"
             }),
+            ui.hr(),
             ui.incDecButtons({
                 increase: decreaseRadius,
                 decrease: increaseRadius,
