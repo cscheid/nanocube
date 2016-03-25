@@ -116,6 +116,7 @@ function fasterColormap(domain, range)
 function init(config)
 {
     var log = true;
+    var showSimilar = false;
 
     // var colors = [d3.hcl(-100,70,60), d3.hcl(0,0,40), d3.hcl(50,70,60)].map(function(d) {
     // var colors = colorbrewer.RdBu[3].slice().map(function(d) {
@@ -277,7 +278,6 @@ function init(config)
             model: model,
             processValues: modelOptions.processValues,
             selectionColor: selColor,
-            showSimilar: false,
             nanocubeLayer: {
                 coarseLevels: 4,
                 opacity: 1.0,
@@ -311,7 +311,7 @@ function init(config)
         model.on("resultsChanged", ui.update);
         model.on("highlightChanged", ui.update);
         model.on("clickChanged", function(){
-            if(heatmap.showSimilar){
+            if(showSimilar){
                 compared_value = model.clickedValue;
                 heatmap.mapOptions = {
                     colormap: similarityColormap,
@@ -406,6 +406,27 @@ function init(config)
         }
     }
     
+    function showOriginalColormap(){
+        heatmap.mapOptions = {
+            colormap: colormap,
+            resetBounds: function() {
+                return extent_tracker.reset();
+            },
+            updateBounds: function(data) {
+                var v1 = weight_extent_tracker.update(data);
+                var v2 = extent_tracker.update(data);
+                var r = v1 || v2;
+                if (r) {
+                    updateColorMap();
+                }
+                return r;
+            }
+        }
+        showSimilar = false;
+        heatmap.redraw();
+        ui.update();
+    }
+    
     ui.add(function() {
         return ui.group(
             ui.state({ state: model && model.highlightedValue,
@@ -430,10 +451,13 @@ function init(config)
             })),
             ui.hr(),
             React.createElement("div", null, ui.checkBox({
-                change: function(evt) {
-                    heatmap.showSimilar = !heatmap.showSimilar;
-                    console.log(heatmap.showSimilar);
-                }, label: "Click to Select"
+                change: function(state) {
+                    showSimilar = state;
+                    if(showSimilar === false){
+                        showOriginalColormap();
+                    }
+                }, label: "Click to Select",
+                checked: showSimilar
             })),
             ui.incDecButtons({
                 increase: increaseSimilarityMeasure,
@@ -491,29 +515,7 @@ function init(config)
                 updateColorMap();
                 heatmap.redraw();
             },
-            "q": function(){
-                heatmap.mapOptions = {
-                    colormap: colormap,
-                    resetBounds: function() {
-                        return extent_tracker.reset();
-                    },
-                    updateBounds: function(data) {
-                        var v1 = weight_extent_tracker.update(data);
-                        var v2 = extent_tracker.update(data);
-                        var r = v1 || v2;
-                        if (r) {
-                            updateColorMap();
-                        }
-                        // if (changedCount) {
-                        //     updateSlopeColorMap(slope_extent_tracker);
-                        //     leg.redraw();
-                        // }
-                        return r;
-                    }
-                }
-                heatmap.redraw();
-                ui.update();
-            },
+            "q": showOriginalColormap,
             "p": function() {
                 similarityRange *= 1.2; 
                 heatmap.redraw(); 
