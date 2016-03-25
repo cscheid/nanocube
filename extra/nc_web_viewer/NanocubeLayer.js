@@ -13,7 +13,8 @@ L.NanocubeLayer = L.TileLayer.Canvas.extend({
         this.process_values = options.processValues;
         this._on = { valueEnter: options.valueEnter || function() {},
                      valueLeave: options.valueLeave || function() {},
-                     valueMove: options.valueMove   || function() {} };
+                     valueMove: options.valueMove   || function() {},
+                     valueClick: options.valueClick || function() {} };
         this.currentPixel = undefined;
     }
 });
@@ -98,6 +99,15 @@ L.NanocubeLayer.prototype.renderTile = function(canvas, size, tilePoint, zoom){
     var ctx = canvas.getContext('2d');
     var coarse = this.coarselevels;
     var that = this;
+    canvas.onclick= function(event) {
+        var pixelX =        event.offsetX  >> coarse,
+            pixelY = (255 - event.offsetY) >> coarse;
+        var targetV = ((this._dict || {})[pixelX] || {})[pixelY];
+        if (!_.isUndefined(targetV)) {
+            that.model.clickValue(targetV);
+            that._on.valueClick(targetV);
+        }
+    };
     canvas.onmousemove = function(event) {
         var pixelX =        event.offsetX  >> coarse,
             pixelY = (255 - event.offsetY) >> coarse;

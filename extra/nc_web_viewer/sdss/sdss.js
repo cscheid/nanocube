@@ -253,6 +253,9 @@ function init(config)
         model.initViews();
         model.on("resultsChanged", ui.update);
         model.on("highlightChanged", ui.update);
+        model.on("clickChanged", function(){
+            console.log("Works!", model.clickedValue);
+        });
     });
 
     //////////////////////////////////////////////////////////////////////////
