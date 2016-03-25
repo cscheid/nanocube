@@ -9,6 +9,42 @@ ui = (function() {
             });
         }
     });
+
+    var RadioButton = React.createClass({
+        handleChange: function(event) {
+            ui.update();
+        },
+        render: function(){
+            return React.createElement("input", {
+                type: "radio",
+                name: this.props.name,
+                value: this.props.value,
+                checked: this.props.checked,
+                onClick: this.props.click,
+                onChange: this.handleChange
+            }) 
+        }
+    });
+
+    var RadioButtonGroup = React.createClass({
+        render: function() {
+            var items = ["div", {className: "ui"}];
+            for(var i = 0; i < this.props.count; i ++){
+                items.push(React.createElement(RadioButton, {
+                    value: this.props.itemValues[i],
+                    name: this.props.groupName,
+                    click: this.props.click,
+                }));
+                items.push(React.createElement(Text, {
+                    text: this.props.itemTexts[i]
+                }));
+                items.push(React.createElement("span", {
+                    style: { paddingLeft: "5px"} 
+                }));
+            }
+            return React.createElement.apply(this, items);
+        }
+    });
     
     var Text = React.createClass({
         render: function() {
@@ -98,6 +134,10 @@ ui = (function() {
         button: function(obj) { return React.createElement(Button, obj); },
         checkBox: function(obj) { return React.createElement(CheckBox, obj); },
         incDecButtons: function(obj) { return React.createElement(IncDecButtonGroup, obj); },
+        radio: function(obj) { return React.createElement(RadioButton, obj);},
+        radioButtons: function(obj){
+            return React.createElement(RadioButtonGroup, obj);
+        },
         div: function() {
             var params = _.toArray(arguments);
             params.unshift("div");

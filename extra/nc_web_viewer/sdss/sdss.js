@@ -47,7 +47,6 @@ function track_three_sigmas_extent(accessor, weight_accessor)
         reset: function() {
             count = sum_x = sum_xx = 0;
         }, update: function(d) {
-            debugger;
             count  += d3.sum(d.map(function(d) {
                 return weight_accessor(d.v);
             }));
@@ -456,9 +455,24 @@ function init(config)
                     if(showSimilar === false){
                         showOriginalColormap();
                     }
-                }, label: "Click to Select",
+                }, label: "Find Similar Cell",
                 checked: showSimilar
             })),
+            ui.radioButtons({
+                groupName: 'radioBtnGroup1',
+                count: 6,
+                itemValues: [0, 1, 2, 3, 4, 'ALL'],
+                itemTexts: ['u','g','r','i','z', 'All'],
+                click: function(evt){
+                    if(evt.target.value == 'ALL'){
+                        compared_index = [0,1,2,3,4];
+                    } else {
+                        compared_index = [Number.parseInt(evt.target.value)];
+                    }
+                    heatmap.redraw();
+                    ui.update();
+                }
+            }),
             ui.incDecButtons({
                 increase: increaseSimilarityMeasure,
                 decrease: decreaseSimilarityMeasure,
