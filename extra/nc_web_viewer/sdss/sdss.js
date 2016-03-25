@@ -393,9 +393,14 @@ function init(config)
         model.on("resultsChanged", ui.update);
         model.on("highlightChanged", ui.update);
         model.on("clickChanged", function(){
+<<<<<<< 8fd22fdef5755b4287bbb59ac4a72c3277d23f86
 <<<<<<< 4ae04acb04e649645e257fadcf06fd2cdae96a94
             if(showSimilar){
                 anchorVal = model.clickedValue;
+=======
+            if(showSimilar){
+                compared_value = model.clickedValue;
+>>>>>>> update similarity plot interaction
                 heatmap.mapOptions = {
                     colormap: similarityColormap,
                     resetBounds: function() {
@@ -519,7 +524,11 @@ function init(config)
                 }
                 return r;
             }
+<<<<<<< 8fd22fdef5755b4287bbb59ac4a72c3277d23f86
         };
+=======
+        }
+>>>>>>> update similarity plot interaction
         showSimilar = false;
         heatmap.redraw();
         ui.update();
@@ -554,7 +563,11 @@ function init(config)
                     if(showSimilar === false){
                         showOriginalColormap();
                     }
+<<<<<<< 8fd22fdef5755b4287bbb59ac4a72c3277d23f86
                 }, label: "Find Similar Cell",
+=======
+                }, label: "Click to Select",
+>>>>>>> update similarity plot interaction
                 checked: showSimilar
             })),
             ui.radioButtons({
@@ -639,7 +652,21 @@ function init(config)
                 updateColorMap();
                 heatmap.redraw();
             },
+<<<<<<< 8fd22fdef5755b4287bbb59ac4a72c3277d23f86
             "q": showOriginalColormap
+=======
+            "q": showOriginalColormap,
+            "p": function() {
+                similarityRange *= 1.2; 
+                heatmap.redraw(); 
+                ui.update();
+            },
+            "o": function() {
+                similarityRange *= 0.8;
+                heatmap.redraw(); 
+                ui.update();
+            }
+>>>>>>> update similarity plot interaction
         }));
 }
 
