@@ -74,8 +74,13 @@ function GroupedBarChart(opts){
 }
 
 GroupedBarChart.prototype.updateAxis = function(data){    
-    var xmin = 0.1 * d3.min(data, function(d){return d.value;});
+    // var xmin = 0.1 * d3.min(data, function(d){return d.value;});
+    var xmin = d3.min(data, function(d){return d.value;});
     var xmax = d3.max(data, function(d){return d.value;});
+
+    var x_center = (xmin + xmax) / 2;
+    xmin -= (x_center - xmin) / 10;
+    xmax += (xmax - x_center) / 10;
     
     this.x.domain([xmin,xmax]);
     var cats = data.map(function(d){return d.cat;});
@@ -139,16 +144,44 @@ GroupedBarChart.prototype.redraw = function(){
         .exit()
         .remove();
 
+    function get_left(d) {
+        var v1 = that.x(0);
+        var v2 = that.x(d.value);
+        var l = Math.min(v1, v2), r = Math.max(v1, v2);
+        if (l < 0)
+            l = 0;
+        return l;
+    }
+    function get_right(d) {
+        var v1 = that.x(0);
+        var v2 = that.x(d.value);
+        var r = Math.max(v1, v2);
+        var width = that.x.range()[1] - that.x.range()[0];
+        if (r > width)
+            r = width;
+        return r;
+    }
     //add the bars back
     this.svg.selectAll('.bar')
         .data(flatdata).enter()
         .append('rect')
         .attr('class', 'bar')
-        .attr('x', 0)
+        .attr('x', function(d) {
+            return get_left(d);
+            
+            // var w = that.x(d.value) - that.x(0);
+            // if (w < 0)
+            //     return 0;
+            // else
+            //     return that.x(0);
+        })
         .attr('y', function(d){return that.y0(d.cat) //category
                                +that.y1(d.color);}) //selection group
         .attr('height',function(d){return that.y1.rangeBand();})
-        .attr('width',function(d){return that.x(d.value);})
+        .attr('width',function(d){
+            var l = get_left(d), r = get_right(d);
+            return r - l;
+        })
         .on('click', this.click_callback) //toggle callback
         .style('fill', function(d){
             if (that.selection.length < 1  //no selection (everything)
