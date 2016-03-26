@@ -117,7 +117,7 @@ function init(config)
     var modelOptions = {
         coarseLevels: 1,
         valueFunction: function(v) {
-            return v.parameters[0];
+            return slope(v);
         },
         processValues: processValues,
         countFunction: count
