@@ -164,13 +164,21 @@ function init(config)
     // };
     var compared_value = undefined;
     var compared_index = [0,1,2,3,4]; // index in mean
+    var distanceFunc = 0;
     function similarity(v) {
-        return similarity_cov_simple(v);
-        //var s = 0;
-        //for(var i = 0; i < compared_index.length; i ++) {
-            //s += Math.pow(v.mean[compared_index[i]]-compared_value.mean[compared_index[i]],2);
-        //}
-        //return Math.sqrt(s);
+        switch(distanceFunc) {
+            case 0: return similarity_mean(v);
+            case 1: return similarity_cov_simple(v);
+            default: return similarity_mean(v);
+        }
+    }
+
+    function similarity_mean(v) {
+        var s = 0;
+        for(var i = 0; i < compared_index.length; i ++) {
+            s += Math.pow(v.mean[compared_index[i]]-compared_value.mean[compared_index[i]],2);
+        }
+        return Math.sqrt(s);
     }
 
     function similarity_cov_simple(v) {
@@ -469,6 +477,17 @@ function init(config)
                 }, label: "Find Similar Cell",
                 checked: showSimilar
             })),
+            ui.radioButtons({
+                groupName: 'radioBtnGroup2',
+                count: 3,
+                itemValues: [0,1,2],
+                itemTexts: ['Mean', 'Cov. Matr.', 'PCA'],
+                click: function(evt) {
+                    distanceFunc = Number.parseInt(evt.target.value);
+                    heatmap.redraw();
+                    ui.update();
+                }
+            }),
             ui.radioButtons({
                 groupName: 'radioBtnGroup1',
                 count: 6,

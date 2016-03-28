@@ -91,7 +91,6 @@ function CalculatePCA(vec) {
     var eig_vector = eig.vec;
     var list = [];
     for(i = 0; i < eig_value.length; i ++) {
-        console.log(d*i, d*i+d);
         list.push({
             'value': eig_value[i],
             'vector': eig_vector.subarray(d*i, d*i+d)
