@@ -162,13 +162,14 @@ function init(config)
     // function average(v) {
     //     return v &&
     // };
-    var compared_value = undefined;
+    var anchorVal = undefined;
     var compared_index = [0,1,2,3,4]; // index in mean
     var distanceFunc = 0;
     function similarity(v) {
         switch(distanceFunc) {
             case 0: return similarity_mean(v);
             case 1: return similarity_cov_simple(v);
+            case 2: return similarity_pca(v);
             default: return similarity_mean(v);
         }
     }
@@ -176,7 +177,7 @@ function init(config)
     function similarity_mean(v) {
         var s = 0;
         for(var i = 0; i < compared_index.length; i ++) {
-            s += Math.pow(v.mean[compared_index[i]]-compared_value.mean[compared_index[i]],2);
+            s += Math.pow(v.mean[compared_index[i]]-anchorVal.mean[compared_index[i]],2);
         }
         return Math.sqrt(s);
     }
@@ -184,9 +185,14 @@ function init(config)
     function similarity_cov_simple(v) {
         var s = 0;
         for(var i = 0; i < v.cov_matrix.length; i ++) {
-            s += Math.pow(v.cov_matrix[i]-compared_value.cov_matrix[i], 2);
+            s += Math.pow(v.cov_matrix[i]-anchorVal.cov_matrix[i], 2);
         }
         return Math.sqrt(s);
+    }
+
+    function similarity_pca(v) {
+        var s = 0;
+        return s;
     }
 
     var weight_extent_tracker = track_extent(weight);
@@ -330,7 +336,7 @@ function init(config)
         model.on("highlightChanged", ui.update);
         model.on("clickChanged", function(){
             if(showSimilar){
-                compared_value = model.clickedValue;
+                anchorVal = model.clickedValue;
                 heatmap.mapOptions = {
                     colormap: similarityColormap,
                     resetBounds: function() {
