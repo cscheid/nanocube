@@ -8,7 +8,13 @@ function processValues(v) {
     if (v.val.count !== void 0) {
         return;
     }
-    v.val = Fitting.Averages(v.val);
+    var avg = Fitting.Averages(v.val);
+    var pca = Fitting.PCA(v.val);
+    v.val = {'count':avg.count, 
+             'mean': avg.mean,
+             'cov_matrix': pca.cov_matrix,
+             'eig_value': pca.eig_value,
+             'eig_vector': pca.eig_vector};
 };
 
 function track_extent(accessor)
@@ -159,11 +165,20 @@ function init(config)
     var compared_value = undefined;
     var compared_index = [0,1,2,3,4]; // index in mean
     function similarity(v) {
+        return similarity_cov_simple(v);
+        //var s = 0;
+        //for(var i = 0; i < compared_index.length; i ++) {
+            //s += Math.pow(v.mean[compared_index[i]]-compared_value.mean[compared_index[i]],2);
+        //}
+        //return Math.sqrt(s);
+    }
+
+    function similarity_cov_simple(v) {
         var s = 0;
-        for(var i = 0; i < compared_index.length; i ++) {
-            s += v.mean[compared_index[i]]-compared_value.mean[compared_index[i]];
+        for(var i = 0; i < v.cov_matrix.length; i ++) {
+            s += Math.pow(v.cov_matrix[i]-compared_value.cov_matrix[i], 2);
         }
-        return s;
+        return Math.sqrt(s);
     }
 
     var weight_extent_tracker = track_extent(weight);
@@ -220,22 +235,18 @@ function init(config)
 
     var similarityRange = 5;
     function updateSimilarityColorMap() {
-        //var cmin = similarity_extent_tracker.extent()[0];
-        //var cmax = similarity_extent_tracker.extent()[1];
-        //cmax = cmax * correction + cmin * (1 - correction);
+        var cmin = similarity_extent_tracker.extent()[0];
+        var cmax = similarity_extent_tracker.extent()[1];
+        cmax = cmax * correction + cmin * (1 - correction);
         //colorMap = fasterColormap([cmin, cmax], colors);
-        var similarColor = d3.rgb('#b2182b');
-        var differentColor = d3.rgb('#999999');
-        colorMap = function(c, obj) {
-            if( c > -similarityRange && c < similarityRange) {
-                obj.r = similarColor.r;
-                obj.g = similarColor.g;
-                obj.b = similarColor.b;
-            } else {
-                obj.r = differentColor.r;
-                obj.g = differentColor.g;
-                obj.b = differentColor.b;
-            }
+        cmin = 0;
+        colorMap = function(c, obj){
+            s = d3.scale.linear().domain([0, cmax])
+                .range(['white', 'red']);
+            color = d3.rgb(s(c));
+            obj.r = color.r;
+            obj.g = color.g;
+            obj.b = color.b;
         };
         
         if (log) {
@@ -597,7 +608,7 @@ window.main = function() {
     //                                      0,   0, 0, 0, 0,
     //                                      0,   0, 0, 0, 0]));
     // d3.json("config_sdss_types.json", function(error, data) {
-    d3.json("config_sdss.json", function(error, data) {
+    d3.json("config_sdss_all.json", function(error, data) {
         init(data);
     });
 };
