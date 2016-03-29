@@ -163,7 +163,6 @@ function init(config)
     //     return v &&
     // };
     var anchorVal = undefined;
-    var compared_index = [0,1,2,3,4]; // index in mean
     var distanceFunc = 0;
     function similarity(v) {
         switch(distanceFunc) {
@@ -174,6 +173,7 @@ function init(config)
         }
     }
 
+    var compared_index = [0,1,2,3,4]; // index in mean
     function similarity_mean(v) {
         var s = 0;
         for(var i = 0; i < compared_index.length; i ++) {
@@ -190,9 +190,54 @@ function init(config)
         return Math.sqrt(s);
     }
 
+    var Mat_Zero = numeric.diag([0,0,0,0,0,0,0,0,0,0]);
+    function isZeroMat(m) {
+        for(var i = 0; i < m.length; i ++){
+            for(var j = 0; j < m[0].length; j ++){
+                if(m[i][j] !== 0){
+                    return false;
+                }
+            } 
+        }
+        return true;
+    }
+    function getP(v) {
+        var u_t = v.eig_vector;
+        var u = numeric.transpose(u_t);
+        var sigma = numeric.diag([1,1,1,0,0,0,0,0,0,0]);
+        return numeric.dot(numeric.dot(u, sigma), u_t);
+    }
     function similarity_pca(v) {
         var s = 0;
-        return s;
+        var p0 = getP(anchorVal);
+        var p1 = getP(v);
+        var m = mSub(p1,p0);
+        // var eig = lapack.dsyev('V', 'L', m);
+        if(!isZeroMat(m)) {
+            //var eigValue = numeric.eig(m).lambda.x;
+            //return Math.max(...eigValue);
+            var L2Norm = 0;
+            for(var i = 0; i < m.length; i ++){
+                for(var j = 0; j < m[0].length; j ++){
+                    L2Norm += Math.pow(m[i][j],2);
+                }
+            }
+            return Math.sqrt(L2Norm);
+        }
+        else {
+            return 0;
+        }
+
+        function mSub(m1,m2) {
+            var s = new Array(m1.length);
+            for(var i = 0; i < s.length; i ++) {
+                s[i] = new Array(m1[0].length);
+                for(var j = 0; j < m1[0].length; j ++) {
+                    s[i][j] = m1[i][j] - m2[i][j];
+                }
+            }
+            return s;
+        }
     }
 
     var weight_extent_tracker = track_extent(weight);
@@ -247,17 +292,20 @@ function init(config)
         obj.a = opacityMap(c2) * 255;
     }
 
-    var similarityRange = 5;
+    var similarityRange = 0.2;
+    var WhiteRedMap = d3.scale.linear().domain([0, 0.2, 2])
+                .range(['white', 'white', 'red']);
+
     function updateSimilarityColorMap() {
         var cmin = similarity_extent_tracker.extent()[0];
         var cmax = similarity_extent_tracker.extent()[1];
         cmax = cmax * correction + cmin * (1 - correction);
-        //colorMap = fasterColormap([cmin, cmax], colors);
         cmin = 0;
+        mid = similarityRange*(cmax/2);
+        WhiteRedMap.domain([cmin, mid, cmax]);
+        //colorMap = fasterColormap([cmin, cmax], colors);
         colorMap = function(c, obj){
-            s = d3.scale.linear().domain([0, cmax])
-                .range(['white', 'red']);
-            color = d3.rgb(s(c));
+            color = d3.rgb(WhiteRedMap(c));
             obj.r = color.r;
             obj.g = color.g;
             obj.b = color.b;
@@ -374,12 +422,24 @@ function init(config)
     function increaseHeatmapOpacity() { sp_view.heatMapOpacity(sp_view.heatMapOpacity() + 0.1); }
     function decreaseHeatmapOpacity() { sp_view.heatMapOpacity(sp_view.heatMapOpacity() - 0.1); }
     function increaseSimilarityMeasure() { 
-        similarityRange *= 1.2; 
+        var cmin = similarity_extent_tracker.extent()[0];
+        var cmax = similarity_extent_tracker.extent()[1];
+        similarityRange += 0.05;
+        similarityRange = Math.min(2, similarityRange);
+        var mid = similarityRange*(cmax/2);
+        WhiteRedMap.domain([cmin, mid, cmax]);
+
         heatmap.redraw(); 
         ui.update();
     }
     function decreaseSimilarityMeasure() { 
-        similarityRange *= 0.8; 
+        var cmin = similarity_extent_tracker.extent()[0];
+        var cmax = similarity_extent_tracker.extent()[1];
+        similarityRange -= 0.05;
+        similarityRange = Math.max(0.05, similarityRange);
+        var mid = similarityRange*(cmax/2);
+        WhiteRedMap.domain([cmin, mid, cmax]);
+
         heatmap.redraw(); 
         ui.update();
     }
@@ -487,7 +547,7 @@ function init(config)
                 groupName: 'radioBtnGroup2',
                 count: 3,
                 itemValues: [0,1,2],
-                itemTexts: ['Mean', 'Cov. Matr.', 'PCA'],
+                itemTexts: ['Mean', 'Cov. Mat.', 'PCA'],
                 click: function(evt) {
                     distanceFunc = Number.parseInt(evt.target.value);
                     heatmap.redraw();
@@ -565,17 +625,7 @@ function init(config)
                 updateColorMap();
                 heatmap.redraw();
             },
-            "q": showOriginalColormap,
-            "p": function() {
-                similarityRange *= 1.2; 
-                heatmap.redraw(); 
-                ui.update();
-            },
-            "o": function() {
-                similarityRange *= 0.8;
-                heatmap.redraw(); 
-                ui.update();
-            }
+            "q": showOriginalColormap
         }));
 }
 
