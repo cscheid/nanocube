@@ -3,7 +3,9 @@
 function Timeseries(opts){
     opts = _.defaults(opts, {
         margin: {top: 30, right: 10, bottom: 30, left: 50},
-        tickFormat: ',s'
+        tickFormat: ',s',
+        xScaleFactory: d3.time.scale,
+        xAccessor: function(d) { return d.date; }
     });
     var margin = opts.margin;
                      
@@ -15,8 +17,10 @@ function Timeseries(opts){
     var width = $(id).width() - margin.left - margin.right;
     var height = $(id).height()- margin.top - margin.bottom;
 
+    this.xAccessor = opts.xAccessor;
+    this._didInitXDomain = false;
     
-    this.x = d3.time.scale()
+    this.x = opts.xScaleFactory()
         .range([0, width]);
     
     this.y = d3.scale.linear()
@@ -169,12 +173,14 @@ Timeseries.prototype.updateRanges=function(){
     },  []);
     
     //set domain
-    var xext = d3.extent(data, function(d) { return d.date; });
+    var xext = d3.extent(data, this.xAccessor);
     var yext = d3.extent(data, function(d) { return d.value; });
 
     this.y.domain(yext);
-    var xdom = this.x.domain();
-    if(xdom[0].getTime()==0 && xdom[1].getTime()==1){ 
+    // var xdom = this.x.domain();
+    // if(xdom[0].getTime()==0 && xdom[1].getTime()==1){ 
+    if (!this._didInitXDomain) {
+        this._didInitXDomain = true;
         //set x to xext for init only
         this.x.domain(xext);
     }
@@ -208,9 +214,9 @@ Timeseries.prototype.drawLine=function(data,color){
     
     var that = this;
     this.line = d3.svg.line()
-        .x(function(d) { return that.x(d.date); })
+        .x(function(d) { return that.x(that.xAccessor(d)); })
         .y(function(d) { return that.y(d.value); }); 
-    
+
     //add data
     this.svg.append('path')
         .datum(data)

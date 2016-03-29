@@ -19,6 +19,7 @@ function Model(opt){
     this.initVars();
 
     this.highlightedValue = undefined;
+    this.clickedValue = undefined;
 
     this.cache_off = false;
 };
@@ -30,6 +31,16 @@ Model.prototype.highlightValue = function(newValue)
     
     if (newValue !== oldValue) {
         this._highlightChanged();
+    }
+};
+
+Model.prototype.clickValue = function(newValue)
+{
+    var oldValue = this.clickedValue;
+    this.clickedValue = newValue;
+    
+    if (newValue !== oldValue) {
+        this._clickChanged();
     }
 };
 
@@ -80,10 +91,12 @@ Model.prototype.initViews = function() {
             }
             vref = that.temporal_vars[v.name];
 
-            //init gui
+            //init gui FIXME REMOVE FROM MODEL
             vref.widget = new Timeseries({
                 name: v.name,
-                tickFormat: null
+                tickFormat: null,
+                xScaleFactory: that.options.timeSeriesXFactory,
+                xAccessor: that.options.timeSeriesXAccessor
             });
             vref.widget.brush_callback = function(start,end){
                 console.log("Brush callback");
@@ -221,6 +234,11 @@ Model.prototype._queryChanged = function()
 Model.prototype._highlightChanged = function()
 {
     _.each(this.listeners["highlightChanged"], function(f) { f(); });
+};
+
+Model.prototype._clickChanged = function()
+{
+    _.each(this.listeners["clickChanged"], function(f) { f(); });
 };
 
 //Tile queries for Spatial Variables
