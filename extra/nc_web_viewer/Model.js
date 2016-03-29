@@ -91,10 +91,12 @@ Model.prototype.initViews = function() {
             }
             vref = that.temporal_vars[v.name];
 
-            //init gui
+            //init gui FIXME REMOVE FROM MODEL
             vref.widget = new Timeseries({
                 name: v.name,
-                tickFormat: null
+                tickFormat: null,
+                xScaleFactory: that.options.timeSeriesXFactory,
+                xAccessor: that.options.timeSeriesXAccessor
             });
             vref.widget.brush_callback = function(start,end){
                 console.log("Brush callback");

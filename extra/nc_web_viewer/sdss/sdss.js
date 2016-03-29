@@ -327,6 +327,10 @@ function init(config)
         leg.redraw();
     }
 
+    var timeSeriesPreScale = d3.scale.linear()
+            .domain([1451606400000, 1452384000000])
+            .range([-0.01, 1.78]);
+    
     var selColor = d3.rgb(255, 128, 0);
     var modelOptions = {
         coarseLevels: 1,
@@ -334,7 +338,11 @@ function init(config)
         },
         valueFunction: average, // total_variance,
         processValues: processValues,
-        countFunction: count
+        countFunction: count,
+        timeSeriesXFactory: d3.scale.linear, // d3.time.scale,
+        timeSeriesXAccessor: function(d) {
+            return timeSeriesPreScale(d.date.getTime());
+        }
     };
 
     var model;
@@ -507,7 +515,7 @@ function init(config)
                 }
                 return r;
             }
-        }
+        };
         showSimilar = false;
         heatmap.redraw();
         ui.update();
