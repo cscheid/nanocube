@@ -214,15 +214,17 @@ function init(config)
         var m = mSub(p1,p0);
         // var eig = lapack.dsyev('V', 'L', m);
         if(!isZeroMat(m)) {
-            //var eigValue = numeric.eig(m).lambda.x;
-            //return Math.max(...eigValue);
-            var L2Norm = 0;
-            for(var i = 0; i < m.length; i ++){
-                for(var j = 0; j < m[0].length; j ++){
-                    L2Norm += Math.pow(m[i][j],2);
-                }
-            }
-            return Math.sqrt(L2Norm);
+            var flattern = [].concat.apply([], m);
+            var eig = lapack.dsyev('N', 'L', flattern);
+            return Math.max(...eig.val);
+
+            //var L2Norm = 0;
+            //for(var i = 0; i < m.length; i ++){
+                //for(var j = 0; j < m[0].length; j ++){
+                    //L2Norm += Math.pow(m[i][j],2);
+                //}
+            //}
+            //return Math.sqrt(L2Norm);
         }
         else {
             return 0;
