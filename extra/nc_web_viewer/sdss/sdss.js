@@ -713,7 +713,7 @@ window.main = function() {
     //                                      0,   0, 0, 0, 0,
     //                                      0,   0, 0, 0, 0]));
     // d3.json("config_sdss_types.json", function(error, data) {
-    d3.json("config_sdss_all.json", function(error, data) {
+    d3.json("config_sdss.json", function(error, data) {
         init(data);
     });
 };
