@@ -14,7 +14,7 @@ legend,#flip-grid-label,#flip-log-label, #flip-refresh-label{
 
 .leaflet-container { /*change background color*/
     background: #000;
-}     
+}
 
 /* styling for grouped barcharts*/
 .axis path,
@@ -47,13 +47,15 @@ img.leaflet-tile {
     position: fixed;
     top: 1em;
     right: 1em;
-    color: rgba(255,255,255,0.9);
-    background-color: rgba(0,0,0,0.5);
     padding: .25em;
 }
 
-#react-ui-main {
-    background-color: rgba(0,0,0,0.5);
+div.ui.panel {
+    background-color: rgba(100,100,100,0.3);
+}
+
+#location {
+    background-color: black;
 }
 
 div.ui {
@@ -65,7 +67,7 @@ g.color-legend text {
     fill: white;
 }
 
-g.color-legend path.domain {
+path.domain {
     fill: none;
     stroke: white;
 }
@@ -73,22 +75,39 @@ g.color-legend path.domain {
 /* add class="paper" to the html element to render it for printing purposes.
  ******************************************************************************/
 
-html.paper g.color-legend path.domain {
+html.paper {
+    background-color: white;
+}
+
+html.paper div.leaflet-container { /*change background color*/
+    background: white;
+}     
+
+html.paper div.ui.panel {
+    background-color: rgba(255,255,255,0.9);
+}
+
+html.paper #location {
+    background-color: white;
+}
+
+html.paper div.ui {
+    color: rgba(0,0,0,1);
+    padding: 3px;
+}
+
+html.paper div.ui svg text {
+    fill: black;
+    stroke: none;
+}
+
+html.paper path.domain {
     fill: none;
     stroke: black;
 }
 
 html.paper img.leaflet-tile {
     -webkit-filter: saturate(30%);
-}
-
-html.paper g.color-legend path.domain {
-    fill: none;
-    stroke: black;
-}
-
-html.paper g.color-legend text {
-    fill: black;
 }
 
 hr {
