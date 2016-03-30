@@ -276,9 +276,9 @@ function init(config)
         var totalCount = (model && model.totalCount()) || {
             total: "-"
         };
-        return ui.div({ id: "total" },
-                      ui.text(" Total: "),
-                      ui.text(totalCount.total));
+        return ui.panel({ id: "total" },
+                        ui.text(" Total: "),
+                        ui.text(totalCount.total));
     };
 
     var fmt = d3.format(",.3f");
@@ -319,7 +319,7 @@ function init(config)
     }
     
     ui.add(function() {
-        return ui.group(
+        return ui.panel(
             ui.state({ state: model && model.highlightedValue,
                        watchers: [function(v) { leg.updateHairLine(average(v)); }]
                      }),
