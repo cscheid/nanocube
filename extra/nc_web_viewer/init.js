@@ -11,6 +11,7 @@ function initPage(config){
         var div = $("#"+d);
         //set CSS
         div.css(config.div[d]);
+        div.addClass("ui panel");
 
         if(div.height() <  1){
             contents.push(div);
