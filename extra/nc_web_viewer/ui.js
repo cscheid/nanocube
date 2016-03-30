@@ -92,6 +92,10 @@ ui = (function() {
         },
         render: function() { return null; }
     });
+
+    function _isReactObject(o) {
+        return _.isObject(o) && (!_.isUndefined(o.$$typeof));
+    }
     
     var ui = {
         state: function(obj) { return React.createElement(StateCell, obj); },
@@ -109,6 +113,19 @@ ui = (function() {
         group: function() {
             var params = _.toArray(arguments);
             params.unshift("div", { className: "ui" });
+            return React.createElement.apply(null, params);
+        },
+        panel: function() {
+            var params = _.toArray(arguments);
+            if (!_isReactObject(params[0])) {
+                // then we assume it's an options parameter
+                params[0] = _.clone(params[0]);
+                params[0].className = (params[0].className || "") + " ui panel";
+            } else {
+                // if it's a react object, then we need to add the options object ourselves.
+                params.unshift({ className: "ui panel" });
+            }
+            params.unshift("div");
             return React.createElement.apply(null, params);
         },
         text: function(text) {

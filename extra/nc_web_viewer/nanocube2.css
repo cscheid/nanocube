@@ -77,6 +77,10 @@ g.color-legend path.domain {
 /* add class="paper" to the html element to render it for printing purposes.
  ******************************************************************************/
 
+html.paper {
+    background-color: white;
+}
+
 html.paper g.color-legend path.domain {
     fill: none;
     stroke: black;

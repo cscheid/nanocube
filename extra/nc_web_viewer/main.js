@@ -106,7 +106,10 @@ function init(config)
 
     function updateSlopeColorMap(tracker) {
         var smin = slope_extent_tracker.extent()[0], smax = slope_extent_tracker.extent()[1];
-        var absmax = Math.max(Math.abs(smin), Math.abs(smax));
+        // var absmax = Math.max(Math.abs(smin), Math.abs(smax));
+        var absmax = 0.03;
+
+        
         d3_colormap.domain([-absmax, -absmax*0.75, -absmax * 0.5, -absmax * 0.25,
                             0,
                             absmax * 0.25, absmax * 0.5, absmax * 0.75,

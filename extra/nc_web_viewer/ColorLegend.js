@@ -8,9 +8,12 @@ function ColorLegend(opts)
         height: 60
     });
     
-    this.svg = opts.element.append("svg")
+    this.svg = opts.element
+        .classed("ui panel", true)
+        .append("svg")
         .attr("width", opts.width)
-        .attr("height", opts.height);
+        .attr("height", opts.height)
+        ;
 
     var xScale = d3.scale.linear().range([10, opts.width + 10]);
     var colorScaleDomain = opts.scale.domain();
