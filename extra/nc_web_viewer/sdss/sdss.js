@@ -125,14 +125,24 @@ function init(config)
 
     // var colors = [d3.hcl(-100,70,60), d3.hcl(0,0,40), d3.hcl(50,70,60)].map(function(d) {
     // var colors = colorbrewer.RdBu[3].slice().map(function(d) {
-    var colors = colorbrewer.Spectral[9].slice().reverse().map(function(d) {
-    // var colors = colorbrewer.YlOrBr[9].slice().reverse().map(function(d) {
+    //var colors = colorbrewer.Spectral[9].slice().reverse().map(function(d) {
+    //// var colors = colorbrewer.YlOrBr[9].slice().reverse().map(function(d) {
+        //var r = d3.rgb(d);
+        //r.a = 255;
+        //return r;
+    //});
+    //var colorList = ['#8b0000','#b81736','#de3f53','#f86e53','#ffa500','#78b47e','#54a483','#329183','#008080'];
+    //var colorList = ['#8b0000','#c73143','#ee725e','#ffb857','#ffff00','#b3e36d','#7bc280','#4aa184','#008080'];
+    //var colorList = ['#8b0000','#b81736','#de3f53','#f86e53','#ffa500','#949082','#6f648d','#49388e','#00008b'];
+    var colorList = ['#8b0000','#be203c','#e3515f','#fb8869','#fec44f','#99bb90','#73a09e','#5082a7','#2166ac'];
+ 
+    var  colors = colorList.map(function(d) {
         var r = d3.rgb(d);
-        r.a = 255;
         return r;
     });
+
     var colorMap = function(v, obj) { obj.r = obj.g = obj.b = obj.a = 0; };
-    var d3_colormap = d3.scale.linear().range(colorbrewer.Spectral[9].slice().reverse());
+    var d3_colormap = d3.scale.linear().range(colorList);
     var opacityMap = function() { return 1.0; };
     
     function weight(v) {
