@@ -66,6 +66,7 @@ function track_three_sigmas_extent(accessor, weight_accessor)
             return true;
         }, extent: function() {
             return extent;
+            //return [0,0.8];
         }
     };
     result.reset();
@@ -135,7 +136,17 @@ function init(config)
     //var colorList = ['#8b0000','#c73143','#ee725e','#ffb857','#ffff00','#b3e36d','#7bc280','#4aa184','#008080'];
     //var colorList = ['#8b0000','#b81736','#de3f53','#f86e53','#ffa500','#949082','#6f648d','#49388e','#00008b'];
     var colorList = ['#8b0000','#be203c','#e3515f','#fb8869','#fec44f','#99bb90','#73a09e','#5082a7','#2166ac'];
- 
+    //var colorList = ['#ffffd9',
+        //'#edf8b1',
+        //'#c7e9b4',
+        //'#7fcdbb',
+        //'#41b6c4',
+        //'#1d91c0',
+        //'#225ea8',
+        //'#253494',
+        //'#081d58'];
+    //colorList.reverse();
+
     var  colors = colorList.map(function(d) {
         var r = d3.rgb(d);
         return r;
@@ -167,6 +178,8 @@ function init(config)
         //     return v.mean[3] - v.mean[4];
         // }
         return v.mean[which_variable];
+        //var index = which_variable+which_variable*10;
+        //return v.cov_matrix[index];
     }
  
     // function average(v) {
@@ -212,6 +225,7 @@ function init(config)
         return true;
     }
     function getP(v) {
+        debugger;
         var u_t = v.eig_vector;
         var u = numeric.transpose(u_t);
         var sigma = numeric.diag([1,1,1,0,0,0,0,0,0,0]);
@@ -403,8 +417,9 @@ function init(config)
         model.on("resultsChanged", ui.update);
         model.on("highlightChanged", ui.update);
         model.on("clickChanged", function(){
+            var start = performance.now();
             if(showSimilar){
-                compared_value = model.clickedValue;
+                anchorVal = model.clickedValue;
                 heatmap.mapOptions = {
                     colormap: similarityColormap,
                     resetBounds: function() {
@@ -422,6 +437,8 @@ function init(config)
                 }
                 heatmap.redraw();
             }
+            var end = performance.now();
+            console.log(end-start);
         });
     });
 

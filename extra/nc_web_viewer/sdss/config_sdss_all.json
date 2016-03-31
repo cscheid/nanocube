@@ -1,10 +1,6 @@
 {
   "title": "sdss_dr7_stars", 
-<<<<<<< 4ae04acb04e649645e257fadcf06fd2cdae96a94
   "url": "http://hdc.cs.arizona.edu/nanocube/10080/", 
-=======
-  "url": "http://hdc.cs.arizona.edu/nanocube/10050/", 
->>>>>>> add clickValue event
   "latlonbox": {
     "max": {
       "location": [
