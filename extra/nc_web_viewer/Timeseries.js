@@ -176,7 +176,7 @@ Timeseries.prototype.updateRanges=function(){
     var xext = d3.extent(data, this.xAccessor);
     var yext = d3.extent(data, function(d) { return d.value; });
 
-    this.y.domain(yext);
+    this.y.domain([0, 0.15]); // yext);
     // var xdom = this.x.domain();
     // if(xdom[0].getTime()==0 && xdom[1].getTime()==1){ 
     if (!this._didInitXDomain) {
